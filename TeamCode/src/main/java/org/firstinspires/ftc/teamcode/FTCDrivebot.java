@@ -29,13 +29,6 @@ public class DriveTrain extends LinearOpMode {
     frontRightMotor.setDirection(DcMotorSimple.Direction.FORWARD);
     backRightMotor.setDirection(DcMotorSimple.Direction.FORWARD);
 
-    // Create april tag processor + vision portal
-    aprilTag = new AprilTagProcessor.Builder()
-      .build();
-
-    visionPortal = new VisionPortal.Builder()
-      .build();
-  
     waitForStart();
 
     while (opModeIsActive()) {
