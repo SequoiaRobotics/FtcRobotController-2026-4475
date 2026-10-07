@@ -55,10 +55,10 @@ public class GorillaDriveBot extends AbstractBasicDriveBot {
         }
 
         // Red Hive seen from right camera
-        AprilTagClusterDetection redAudienceRightDetection  = visionTask.targetDetectionsRight.get("Red Audience");
+        AprilTagClusterDetection redAudienceRightDetection  = visionTask.targetDetectionsRight.get("Blue Audience");
         String                   hiveRedAudienceRight       = "b:? r:? y:?";
         String                   botRedAudienceRight        = "x:? y:? y:?";
-        AprilTagClusterDetection redScoringRightDetection   = visionTask.targetDetectionsRight.get("Red Scoring");
+        AprilTagClusterDetection redScoringRightDetection   = visionTask.targetDetectionsRight.get("Blue Scoring");
         String                   hiveRedScoringRight        = "b:? r:? y:?";
         String                   botRedScoringRight         = "x:? y:? y:?";
 
