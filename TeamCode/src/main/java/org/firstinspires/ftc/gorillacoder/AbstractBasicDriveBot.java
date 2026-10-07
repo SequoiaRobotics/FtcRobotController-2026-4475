@@ -86,15 +86,36 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
     protected BotTask<AbstractBasicDriveBot>[] getTasks() {
         telemetry.addData("status", "TeleOpDrive.createTasks(): tasks created");
 
-        drivePovTask
+        if ( true ) {
+            // Gorilla Bot
+            drivePovTask
             .driveLeftFront(hardwareMap.get( DcMotorEx.class, "Drive Front Left"))
             .driveRightFront(hardwareMap.get(DcMotorEx.class, "Drive Front Right"))
             .driveLeftRear(hardwareMap.get(  DcMotorEx.class, "Drive Rear Left"))
             .driveRightRear(hardwareMap.get( DcMotorEx.class, "Drive Rear Right"))
-        ;
-        visionTask
+            ;
+        } else {
+            // Sequoia Bot
+            drivePovTask
+            .driveLeftFront(hardwareMap.get(DcMotorEx.class, "frontLeft"))
+            .driveRightFront(hardwareMap.get(DcMotorEx.class, "frontRight"))
+            .driveLeftRear(hardwareMap.get(DcMotorEx.class, "backLeft"))
+            .driveRightRear(hardwareMap.get(DcMotorEx.class, "backRight"))
+            ;
+        }
+        if ( true ) {
+            // Gorilla Bot
+            visionTask
             .cameraLeft( hardwareMap.get(WebcamName.class, "Webcam Left"))
-            .cameraRight(hardwareMap.get(WebcamName.class, "Webcam Right"));
+            .cameraRight(hardwareMap.get(WebcamName.class, "Webcam Right"))
+            ;
+        } else {
+            // Sequoia Bot
+            visionTask
+            .cameraLeft(hardwareMap.get(WebcamName.class, "Webcam 1"))
+            .cameraRight(hardwareMap.get(WebcamName.class, "Webcam 2"))
+            ;
+        }
         telemetry.addData("status", "TeleOpDrive.createTasks(): tasks connected to hardware");
 
         @SuppressWarnings("unchecked")
