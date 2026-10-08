@@ -47,7 +47,7 @@ public class FTCDrivebot extends LinearOpMode {
     visionPortal = new VisionPortal.Builder()
       .setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"))
       .addProcessor(aprilTag)
-//      .SetCameraResolution(new Size(640, 480))
+      .SetCameraResolution(new Size(640, 480))
       .build();
     
     waitForStart();
@@ -73,13 +73,13 @@ public class FTCDrivebot extends LinearOpMode {
       
       // Display details for detected april tags
       for(AprilTagDetection detection : currentDetections) {
-//        if (detection.metadata != null) {
-//          telemetry.addLine(String.format("\n==== (ID %d) %s ====", detection.id, detection.metadata.name));
-//          telemetry.addLine(String.format("XYZ: %6.1f %6.1f %6.1f  (inch)", detection.ftcPose.x, detection.ftcPose.y, detection.ftcPose.z));
-//          telemetry.addLine(String.format("PRY: %6.1f %6.1f %6.1f  (deg)", detection.ftcPose.pitch, detection.ftcPose.roll, detection.ftcPose.yaw));
-//        } else {
-//          telemetry.addLine(String.format("\n==== (ID %d) Unknown Tag ====", detection.id));
-//        }
+        if (detection.metadata != null) {
+          telemetry.addLine(String.format("\n==== (ID %d) %s ====", detection.id, detection.metadata.name));
+          telemetry.addLine(String.format("XYZ: %6.1f %6.1f %6.1f  (inch)", detection.ftcPose.x, detection.ftcPose.y, detection.ftcPose.z));
+          telemetry.addLine(String.format("PRY: %6.1f %6.1f %6.1f  (deg)", detection.ftcPose.pitch, detection.ftcPose.roll, detection.ftcPose.yaw));
+        } else {
+          telemetry.addLine(String.format("\n==== (ID %d) Unknown Tag ====", detection.id));
+        }
       }
       // Update new telemetry
       telemetry.update();
