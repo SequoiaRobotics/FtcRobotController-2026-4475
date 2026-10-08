@@ -39,12 +39,12 @@ public abstract class AbstractDriveTask<OpModeT extends AbstractOpMode<OpModeT>>
         return this;
     }
 
-    DcMotorEx driveLeftRear;
+    public DcMotorEx driveLeftRear;
 
-    DcMotorEx driveRightRear;
+    public DcMotorEx driveRightRear;
 
-    DcMotorEx driveLeftFront;
+    public DcMotorEx driveLeftFront;
 
-    DcMotorEx driveRightFront;
+    public DcMotorEx driveRightFront;
 
 } // abstract class AbstractDriveTask

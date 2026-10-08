@@ -1,43 +1,84 @@
 package org.firstinspires.ftc.teamcode;
 
+import static org.firstinspires.ftc.gorillacoder.AbstractBasicDriveBot.DriveMode.DRIVE_POV;
 import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.DEGREES;
 import static org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit.INCH;
 
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.gorillacoder.AbstractBasicDriveBot;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.vision.apriltag.AprilTagClusterDetection;
 
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 @SuppressWarnings("unused")
 @TeleOp
 public class GorillaDriveBot extends AbstractBasicDriveBot {
 
+    protected double lastDriveModeSwitchTime = getRuntime();
     protected void readGamePad() {
-        // POV Drive
-        drivePovTask.speed    = gamepad1.right_stick_y;
-        drivePovTask.turnRate = gamepad1.right_stick_x;
+        if (getRuntime() < lastDriveModeSwitchTime + .2) {
+            // debounce, don't accept too rapid mode switches. We just run too fast.
+            // The user is holding the button down, and we detect it twice (or more).
+        } else if (gamepad1.right_stick_button) {
+            // change driveMode
+            driveMode = nextDriveModeFor.get(driveMode);
+            lastDriveModeSwitchTime = getRuntime();
+        }
+        if (null == driveMode) {
+            driveMode = DRIVE_POV;
+        }
+        switch (driveMode) {
+        case DRIVE_POV:
+            drivePovTask.speed    = gamepad1.right_stick_y;
+            drivePovTask.turnRate = gamepad1.right_stick_x;
+            break;
+        case DRIVE_TANK:
+            driveTankTask.leftPower  = gamepad1.left_stick_y;
+            driveTankTask.rightPower = gamepad1.right_stick_y;
+            break;
+        case DRIVE_OMNI:
+            driveOmniTask.axial   = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
+            driveOmniTask.lateral = gamepad1.left_stick_x;
+            driveOmniTask.yaw     = gamepad1.right_stick_x;
+            break;
+        }
 
-        // Tank Drive
-        driveTankTask.leftPower  = gamepad1.left_stick_y;
-        driveTankTask.rightPower = gamepad1.right_stick_y;
+        if (gamepad1.left_bumper) {
+            telemetryMode = TelemetryMode.TELEMETRY_LOCATIONS;
+        } else if (gamepad1.right_bumper) {
+            telemetryMode = TelemetryMode.TELEMETRY_APRIL_TAG_NAMES;
+        }
     }
 
-    @Override
-    protected void updateTelemetry() {
-        telemetry.addData("Status", "Version 1. %s alliance running %s", alliance, runtime);
-        telemetry.addData("Camera", "%s %s", visionTask.portalLeft.getCameraState() , visionTask.portalRight.getCameraState());
-        telemetry.addData("Motors", "speed:%.2f  turn:%.2f", drivePovTask.speed, drivePovTask.turnRate);
-        telemetry.addData("Motors", " left:%.2f right:%.2f", drivePovTask.leftPower, drivePovTask.rightPower);
+    protected static enum TelemetryMode {
+        TELEMETRY_LOCATIONS,
+        TELEMETRY_APRIL_TAG_NAMES
+    }
+    protected TelemetryMode telemetryMode = TelemetryMode.TELEMETRY_LOCATIONS;
+    protected Map<TelemetryMode, TelemetryMode> nextTelemetryModeFor = new HashMap<>();
+    {
+        nextTelemetryModeFor.put(TelemetryMode.TELEMETRY_LOCATIONS,       TelemetryMode.TELEMETRY_APRIL_TAG_NAMES);
+        nextTelemetryModeFor.put(TelemetryMode.TELEMETRY_APRIL_TAG_NAMES, TelemetryMode.TELEMETRY_LOCATIONS);
+    }
+
+    protected void updateTelemetryLocations() {
+
+        String BlueAudienceName = "BLUE AUDIENCE";
+        String BlueScoringName  = "BLUE SCORING";
+        String RedAudienceName  = "RED AUDIENCE";
+        String RedScoringName   = "RED SCORING";
 
         // Red Hive seen from left camera
-        AprilTagClusterDetection redAudienceLeftDetection   = visionTask.targetDetectionsLeft.get("Red Audience");
+        AprilTagClusterDetection redAudienceLeftDetection   = visionTask.targetDetectionsLeft.get(RedAudienceName);
         String                   hiveRedAudienceLeft        = "b:? r:? y:?";
         String                   botRedAudienceLeft         = "x:? y:? y:?";
-        AprilTagClusterDetection redScoringLeftDetection    = visionTask.targetDetectionsLeft.get("Red Scoring");
+        AprilTagClusterDetection redScoringLeftDetection    = visionTask.targetDetectionsLeft.get(RedScoringName);
         String                   hiveRedScoringLeft         = "b:? r:? y:?";
         String                   botRedScoringLeft          = "x:? y:? y:?";
 
@@ -50,15 +91,15 @@ public class GorillaDriveBot extends AbstractBasicDriveBot {
         if (null != redScoringLeftDetection) {
             hiveRedScoringLeft = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
                 redScoringLeftDetection.ftcPose.bearing, redScoringLeftDetection.ftcPose.range, redScoringLeftDetection.ftcPose.yaw);
-            botRedAudienceLeft = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
+            botRedScoringLeft = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
                 redScoringLeftDetection.robotPose.getPosition().x, redScoringLeftDetection.robotPose.getPosition().y, redScoringLeftDetection.robotPose.getOrientation().getYaw(DEGREES));
         }
 
         // Red Hive seen from right camera
-        AprilTagClusterDetection redAudienceRightDetection  = visionTask.targetDetectionsRight.get("Blue Audience");
+        AprilTagClusterDetection redAudienceRightDetection  = visionTask.targetDetectionsRight.get(RedAudienceName);
         String                   hiveRedAudienceRight       = "b:? r:? y:?";
         String                   botRedAudienceRight        = "x:? y:? y:?";
-        AprilTagClusterDetection redScoringRightDetection   = visionTask.targetDetectionsRight.get("Blue Scoring");
+        AprilTagClusterDetection redScoringRightDetection   = visionTask.targetDetectionsRight.get(RedScoringName);
         String                   hiveRedScoringRight        = "b:? r:? y:?";
         String                   botRedScoringRight         = "x:? y:? y:?";
 
@@ -71,15 +112,15 @@ public class GorillaDriveBot extends AbstractBasicDriveBot {
         if (null != redScoringRightDetection) {
             hiveRedScoringRight = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
                 redScoringRightDetection.ftcPose.bearing, redScoringRightDetection.ftcPose.range, redScoringRightDetection.ftcPose.yaw);
-            botRedAudienceRight = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
+            botRedScoringRight = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
                 redScoringRightDetection.robotPose.getPosition().x, redScoringRightDetection.robotPose.getPosition().y, redScoringRightDetection.robotPose.getOrientation().getYaw(DEGREES));
         }
 
         // Blue Hive seen from left camera
-        AprilTagClusterDetection blueAudienceLeftDetection  = visionTask.targetDetectionsLeft.get("Blue Audience");
+        AprilTagClusterDetection blueAudienceLeftDetection  = visionTask.targetDetectionsLeft.get(BlueAudienceName);
         String                   hiveBlueAudienceLeft       = "b:? r:? y:?";
         String                   botBlueAudienceLeft        = "x:? y:? y:?";
-        AprilTagClusterDetection blueScoringLeftDetection   = visionTask.targetDetectionsLeft.get("Blue Scoring");
+        AprilTagClusterDetection blueScoringLeftDetection   = visionTask.targetDetectionsLeft.get(BlueScoringName);
         String                   hiveBlueScoringLeft        = "b:? r:? y:?";
         String                   botBlueScoringLeft         = "x:? y:? y:?";
 
@@ -92,15 +133,15 @@ public class GorillaDriveBot extends AbstractBasicDriveBot {
         if (null != blueScoringLeftDetection) {
             hiveBlueScoringLeft = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
                 blueScoringLeftDetection.ftcPose.bearing, blueScoringLeftDetection.ftcPose.range, blueScoringLeftDetection.ftcPose.yaw);
-            botBlueAudienceLeft = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
+            botBlueScoringLeft = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
                 blueScoringLeftDetection.robotPose.getPosition().x, blueScoringLeftDetection.robotPose.getPosition().y, blueScoringLeftDetection.robotPose.getOrientation().getYaw(DEGREES));
         }
 
         // Blue Hive seen from right camera
-        AprilTagClusterDetection blueAudienceRightDetection = visionTask.targetDetectionsRight.get("Blue Audience");
+        AprilTagClusterDetection blueAudienceRightDetection = visionTask.targetDetectionsRight.get(BlueAudienceName);
         String                   hiveBlueAudienceRight      = "b:? r:? y:?";
         String                   botBlueAudienceRight       = "x:? y:? y:?";
-        AprilTagClusterDetection blueScoringRightDetection  = visionTask.targetDetectionsRight.get("Blue Scoring");
+        AprilTagClusterDetection blueScoringRightDetection  = visionTask.targetDetectionsRight.get(BlueScoringName);
         String                   hiveBlueScoringRight       = "b:? r:? y:?";
         String                   botBlueScoringRight        = "x:? y:? y:?";
 
@@ -113,7 +154,7 @@ public class GorillaDriveBot extends AbstractBasicDriveBot {
         if (null != blueScoringRightDetection) {
             hiveBlueScoringRight = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
                 blueScoringRightDetection.ftcPose.bearing, blueScoringRightDetection.ftcPose.range, blueScoringRightDetection.ftcPose.yaw);
-            botBlueAudienceRight = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
+            botBlueScoringRight = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
                 blueScoringRightDetection.robotPose.getPosition().x, blueScoringRightDetection.robotPose.getPosition().y, blueScoringRightDetection.robotPose.getOrientation().getYaw(DEGREES));
         }
 
@@ -134,6 +175,58 @@ public class GorillaDriveBot extends AbstractBasicDriveBot {
         telemetry.addData("    BAL", "%s", hiveBlueAudienceLeft);
         telemetry.addData("    BAR", "%s", hiveBlueAudienceRight);
     }
+
+    protected void updateTelemetryAprilTags() {
+        telemetryCount = 0;
+        telemetry.log().setDisplayOrder(Telemetry.Log.DisplayOrder.OLDEST_FIRST);
+        telemetry.log().add("");
+        telemetry.log().add("Left Camera AprilTag Names: " + telemetryCount++);
+        visionTask.targetDetectionsLeft.keySet().forEach(
+            name -> telemetry.log().add(telemetryCount++ + ". " + name)
+        );
+        telemetry.log().add("Right Camera AprilTag Names: " + telemetryCount++);
+        visionTask.targetDetectionsRight.keySet().forEach(
+            name -> telemetry.log().add(telemetryCount++ + ". " + name)
+        );    }
+
+    @Override
+    protected void updateTelemetry() {
+        telemetry.log().clear();
+
+        telemetry.addData("Status", "%s alliance running %s", alliance, runtime);
+        telemetry.addData("Camera", "%s %s", visionTask.portalLeft.getCameraState() , visionTask.portalRight.getCameraState());
+
+        switch (driveMode) {
+            case DRIVE_POV:
+                telemetry.addData("POV", "speed:%.2f  turn:%.2f", drivePovTask.speed, drivePovTask.turnRate);
+                telemetry.addData("   ", " left:%.2f right:%.2f", drivePovTask.leftPower, drivePovTask.rightPower);
+                break;
+            case DRIVE_TANK:
+                telemetry.addData("TANK", " left:%.2f right:%.2f", driveTankTask.leftPower, driveTankTask.rightPower);
+                break;
+            case DRIVE_OMNI:
+                telemetry.addData("OMNI", "axial:%.2f  lat:%.2f yaw:%.2f", driveOmniTask.axial, driveOmniTask.lateral, driveOmniTask.yaw);
+                telemetry.addData("    ", "motors:%.2f %.2f %.2f %.2f",
+                    driveOmniTask.driveLeftFront.getPower(),
+                    driveOmniTask.driveRightFront.getPower(),
+                    driveOmniTask.driveLeftFront.getPower(),
+                    driveOmniTask.driveRightFront.getPower()
+                );
+                break;
+            default:
+                telemetry.addData("WEIRD MOTOR MODE", "");
+        }
+
+        switch (telemetryMode) {
+            case TELEMETRY_LOCATIONS:
+                updateTelemetryLocations();
+                break;
+            case TELEMETRY_APRIL_TAG_NAMES:
+                updateTelemetryAprilTags();
+                break;
+        }
+    }
+    private int telemetryCount = 0;
 
     @Override
     protected GorillaDriveBot configureAprilTagProcessors() {

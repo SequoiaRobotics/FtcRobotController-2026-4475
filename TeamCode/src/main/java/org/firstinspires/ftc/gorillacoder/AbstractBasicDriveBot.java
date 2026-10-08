@@ -1,29 +1,14 @@
 package org.firstinspires.ftc.gorillacoder;
 
-import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.DEGREES;
-import static org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit.INCH;
-import static org.firstinspires.ftc.vision.opencv.ColorBlobLocatorProcessor.Blob;
-import static org.firstinspires.ftc.vision.opencv.ColorBlobLocatorProcessor.BlobCriteria;
-import static org.firstinspires.ftc.vision.opencv.ColorBlobLocatorProcessor.BlobFilter;
-import static org.firstinspires.ftc.vision.opencv.ColorBlobLocatorProcessor.BlobSort;
-
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.util.RobotLog;
-import com.qualcomm.robotcore.util.SortOrder;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
-import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
-import org.firstinspires.ftc.vision.opencv.ColorBlobLocatorProcessor;
-import org.firstinspires.ftc.vision.opencv.ColorRange;
-import org.firstinspires.ftc.vision.opencv.ColorSpace;
-import org.opencv.core.Scalar;
 
-import java.util.List;
-import java.util.Locale;
+import java.util.HashMap;
+import java.util.Map;
 
 @SuppressWarnings("unused")
 public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasicDriveBot> {
@@ -36,7 +21,12 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
     protected class GamePadTask extends TeleOpDriveTask {
         @Override
         public GamePadTask run() {
-           readGamePad();
+            DriveMode priorDriveMode = opMode.driveMode;
+            readGamePad();
+            if (priorDriveMode != opMode.driveMode) {
+                disable(driveTasks.get(priorDriveMode));
+                enable(driveTasks.get(opMode.driveMode));
+            }
 
             return this;
         }
@@ -89,18 +79,30 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
         if ( true ) {
             // Gorilla Bot
             drivePovTask
-            .driveLeftFront(hardwareMap.get( DcMotorEx.class, "Drive Front Left"))
-            .driveRightFront(hardwareMap.get(DcMotorEx.class, "Drive Front Right"))
-            .driveLeftRear(hardwareMap.get(  DcMotorEx.class, "Drive Rear Left"))
-            .driveRightRear(hardwareMap.get( DcMotorEx.class, "Drive Rear Right"))
+                .driveLeftFront(hardwareMap.get( DcMotorEx.class, "Drive Front Left"))
+                .driveRightFront(hardwareMap.get(DcMotorEx.class, "Drive Front Right"))
+                .driveLeftRear(hardwareMap.get(  DcMotorEx.class, "Drive Rear Left"))
+                .driveRightRear(hardwareMap.get( DcMotorEx.class, "Drive Rear Right"))
+            ;
+            driveTankTask
+                .driveLeftFront(hardwareMap.get( DcMotorEx.class, "Drive Front Left"))
+                .driveRightFront(hardwareMap.get(DcMotorEx.class, "Drive Front Right"))
+                .driveLeftRear(hardwareMap.get(  DcMotorEx.class, "Drive Rear Left"))
+                .driveRightRear(hardwareMap.get( DcMotorEx.class, "Drive Rear Right"))
+            ;
+            driveOmniTask
+                .driveLeftFront(hardwareMap.get( DcMotorEx.class, "Drive Front Left"))
+                .driveRightFront(hardwareMap.get(DcMotorEx.class, "Drive Front Right"))
+                .driveLeftRear(hardwareMap.get(  DcMotorEx.class, "Drive Rear Left"))
+                .driveRightRear(hardwareMap.get( DcMotorEx.class, "Drive Rear Right"))
             ;
         } else {
             // Sequoia Bot
             drivePovTask
-            .driveLeftFront(hardwareMap.get(DcMotorEx.class, "frontLeft"))
-            .driveRightFront(hardwareMap.get(DcMotorEx.class, "frontRight"))
-            .driveLeftRear(hardwareMap.get(DcMotorEx.class, "backLeft"))
-            .driveRightRear(hardwareMap.get(DcMotorEx.class, "backRight"))
+                .driveLeftFront(hardwareMap.get(DcMotorEx.class, "frontLeft"))
+                .driveRightFront(hardwareMap.get(DcMotorEx.class, "frontRight"))
+                .driveLeftRear(hardwareMap.get(DcMotorEx.class, "backLeft"))
+                .driveRightRear(hardwareMap.get(DcMotorEx.class, "backRight"))
             ;
         }
         if ( true ) {
@@ -118,12 +120,12 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
         }
         telemetry.addData("status", "TeleOpDrive.createTasks(): tasks connected to hardware");
 
+        driveMode = DriveMode.DRIVE_POV;
         @SuppressWarnings("unchecked")
         BotTask<AbstractBasicDriveBot>[] result = new BotTask[] {
+            gamePadTask,
             visionTask,
             drivePovTask,
-//                driveTankTask,
-            gamePadTask,
             new TelemetryTask()
         };
         return result;
@@ -136,11 +138,34 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
 
     protected VisionTaskMultiPortal<AbstractBasicDriveBot> visionTask   = new VisionTaskMultiPortal<>();
 
-    protected DrivePovTask<AbstractBasicDriveBot>          drivePovTask = new DrivePovTask<>();
-
-    protected DriveTankTask<AbstractBasicDriveBot>         driveTankTask = new DriveTankTask<>();
-
     protected GamePadTask                                  gamePadTask   = new GamePadTask();
+
+    public enum DriveMode {
+        DRIVE_TANK,
+        DRIVE_POV,
+        DRIVE_OMNI
+    }
+    protected static final DriveMode DRIVE_ARCADE = DriveMode.DRIVE_POV;
+
+    protected Map<DriveMode, AbstractDriveTask<AbstractBasicDriveBot>> driveTasks  = new HashMap<>();
+    protected Map<DriveMode, DriveMode> nextDriveModeFor = new HashMap<>();
+
+    protected DriveMode                                    driveMode      = DriveMode.DRIVE_POV;
+    protected DrivePovTask<AbstractBasicDriveBot>          drivePovTask   = new DrivePovTask<>();
+
+    protected DriveTankTask<AbstractBasicDriveBot>         driveTankTask   = new DriveTankTask<>();
+
+    protected DriveOmniTask<AbstractBasicDriveBot>         driveOmniTask   = new DriveOmniTask<>();
+
+    {
+        nextDriveModeFor.put(DriveMode.DRIVE_TANK, DriveMode.DRIVE_POV);
+        nextDriveModeFor.put(DriveMode.DRIVE_POV,  DriveMode.DRIVE_OMNI);
+        nextDriveModeFor.put(DriveMode.DRIVE_OMNI, DriveMode.DRIVE_TANK);
+
+        driveTasks.put(DriveMode.DRIVE_TANK, driveTankTask);
+        driveTasks.put(DriveMode.DRIVE_POV,  drivePovTask);
+        driveTasks.put(DriveMode.DRIVE_OMNI, driveOmniTask);
+    }
 
 } // abstract class AbstractBasicDriveBot
 

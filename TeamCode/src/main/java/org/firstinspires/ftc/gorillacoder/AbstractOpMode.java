@@ -16,7 +16,6 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagSingleDetection;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.function.Supplier;
@@ -88,30 +87,51 @@ public abstract class AbstractOpMode<OpModeT extends OpMode> extends OpMode {
         return result;
     }
 
-    /** Subclasses should set inversionFactor per the field location of bots at start.
+    /** Subclasses should set botStartInversionFactor per the field location of bots at start.
      *   1 if red bots start on the red side of the field. Nearer the red wall.
      *  -1 if red bots start on the blue side of the field. Nearer the blue wall.
      */
-    protected double inversionFactor = -1;
+    protected double botStartInversionFactor = 1;
+    public static enum FieldConfiguration {
+        FIELD_CONFIGURATION_SQUARE,
+        FIELD_CONFIGURATION_DIAMOND
+    }
+    public static FieldConfiguration ALLIANCES_ACROSS   = FieldConfiguration.FIELD_CONFIGURATION_SQUARE;
+    public static FieldConfiguration ALLIANCES_ADJACENT = FieldConfiguration.FIELD_CONFIGURATION_DIAMOND;
+    protected FieldConfiguration fieldConfiguration = ALLIANCES_ACROSS;
+
+    // TO DO: Move these to some constants class. FTC_CONSTANTS?
+    public static final double FIELD_LENGTH_IN = 12 * 12; // 12 feet by 12 inches per feet.
+    public static final double FIELD_LENGTH_CM = 2.54 * FIELD_LENGTH_IN;
 
     /** Which alliance's side of the field is the position on?
-     *
-     *  THIS WORKS ONLY FOR "SQUARE" FIELDS, where red and blue alliances face each other
-     *  on parallel walls of the field.
-     *
-     *  OpMode must override this if the field is a "diamond" field, where red and blue alliances
-     *  are on adjacent walls.
      *
      * @param position
      * @return Alliance for the field position.
      */
     protected Alliance allianceOwningFieldPosition(Position position) {
-        double ycm = inversionFactor * CM.fromUnit(position.unit, position.y);
-        if ( ycm < -20 ) {
-            // Near the red wall, so a blue bot
-            return Alliance.Blue;
-        } else if ( 20 < ycm ) {
-            return Alliance.Red;
+        double xcm = botStartInversionFactor * CM.fromUnit(position.unit, position.x);
+        double ycm = botStartInversionFactor * CM.fromUnit(position.unit, position.y);
+
+        if ( ALLIANCES_ACROSS == fieldConfiguration ) {
+            if (ycm < -50) {
+                return Alliance.Red;
+            } else if (FIELD_LENGTH_CM - 50 < ycm) {
+                return Alliance.Blue;
+            } else {
+                return Alliance.Unknown;
+            }
+        } else if ( ALLIANCES_ADJACENT == fieldConfiguration ) {
+            if (xcm < 2.54 * 12 && ycm < 2.54 * 12) {
+                // if the 'bot is in the corner tile, don't even bother guessing which alliance it is part of.
+                return Alliance.Unknown;
+            } else if (ycm < -50) {
+                return Alliance.Red;
+            } else if (FIELD_LENGTH_CM - 50 < xcm) {
+                return Alliance.Blue;
+            } else {
+                return Alliance.Unknown;
+            }
         } else {
             return Alliance.Unknown;
         }
@@ -134,25 +154,29 @@ public abstract class AbstractOpMode<OpModeT extends OpMode> extends OpMode {
         // Don't set our alliance if we aren't in Autonomous period. Who knows where we are on the field ...
         if (null == getClass().getAnnotation(Autonomous.class)) return this;
 
-        if (null == detection) throw new NullPointerException("detection is null");
+        // It would be nice to throw when testing, but truly horrible awful in a match!
+        // if (null == detection) throw new NullPointerException("detection is null");
+        if (null == detection) {
+            RobotLog.ii(GORILLA_CORE,
+                "%s.setAllianceFromDetection(): detection is null!?!?!?!",
+                getClass().getSimpleName()
+            );
+            return this;
+        }
 
         alliance = allianceOwningFieldPosition(detection.robotPose.getPosition());
         blackboard.put("Alliance", alliance.toString());
 
         return this;
     }
+
     @SuppressWarnings("UnusedReturnValue")
-    protected AbstractOpMode<OpModeT> onFreshDetections(String label, List<AprilTagClusterDetection> blobs) {
-        blobs.forEach(blob -> {
-            setAllianceFromDetection(blob);
-        });
+    protected AbstractOpMode<OpModeT> onFreshDetections(String label, List<AprilTagClusterDetection> detections) {
+        detections.forEach(this::setAllianceFromDetection);
         return this;
     }
 
 
-    // TODO: KIll this. It's too complicated. And OpModes need to know their tasks, so tey are already just creating them.
-    //  Sure, we could give the tasks names so the OpMode could look them up after they were built ... but why.
-    //  KISS, unless it's demonstrably needed. It isn't.
     @SuppressWarnings("UnusedReturnValue")
     public AbstractOpMode<OpModeT> tasks(Object... value)
             throws BotTaskBuilder.Exception, ClassNotFoundException, IllegalAccessException, InstantiationException
@@ -163,6 +187,18 @@ public abstract class AbstractOpMode<OpModeT extends OpMode> extends OpMode {
         // Otherwise, the RC App WILL notice, and it will forcibly kill the OpMode and the restart the bot.
         // Devastating if that happens at the end of Auto period. Bot will be dead in the water at the start of TeleOp period.
         tasks = new PriorityQueue<>( builder.addTasks(value).tasks() );
+
+        return this;
+    }
+
+    public AbstractOpMode<OpModeT> enable(BotTask<AbstractOpMode<OpModeT>> task) {
+        tasks.add(task);
+
+        return this;
+    }
+
+    public AbstractOpMode<OpModeT> disable(BotTask<AbstractOpMode<OpModeT>> task) {
+        tasks.remove(task);
 
         return this;
     }
