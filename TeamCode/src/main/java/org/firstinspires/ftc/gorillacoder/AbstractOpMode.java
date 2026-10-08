@@ -245,7 +245,7 @@ public abstract class AbstractOpMode<OpModeT extends OpMode> extends OpMode {
 
         /** Configure telemetry. Configure capacity, order, format, etc. */
     @SuppressWarnings("UnusedReturnValue")
-    protected AbstractOpMode<OpModeT> configureTelemetry() {
+    protected AbstractOpMode<OpModeT> configureBot() {
         return this;
     }
 
@@ -253,7 +253,7 @@ public abstract class AbstractOpMode<OpModeT extends OpMode> extends OpMode {
 
     @Override
     public void init() {
-        configureTelemetry();
+        configureBot();
 
         RobotLog.ii(GORILLA_CORE, "%s.init(): start", getClass().getSimpleName());
 
