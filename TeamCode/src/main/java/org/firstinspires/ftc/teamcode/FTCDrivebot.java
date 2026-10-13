@@ -33,11 +33,17 @@ public class FTCDrivebot extends LinearOpMode {
     DcMotor backLeftMotor = hardwareMap.get(DcMotor.class, "backLeft");
     DcMotor frontRightMotor = hardwareMap.get(DcMotor.class, "frontRight");
     DcMotor backRightMotor = hardwareMap.get(DcMotor.class, "backRight");
-  
+
+    // Reverse left motors
     frontLeftMotor.setDirection(DcMotorSimple.Direction.REVERSE);
     backLeftMotor.setDirection(DcMotorSimple.Direction.REVERSE);
-    frontRightMotor.setDirection(DcMotorSimple.Direction.FORWARD);
-    backRightMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+
+    // Set encoders
+    frontLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+    backLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+    frontRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+    backRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+    
 
     // Create april tag processor + vision portal
     aprilTag = new AprilTagProcessor.Builder()
