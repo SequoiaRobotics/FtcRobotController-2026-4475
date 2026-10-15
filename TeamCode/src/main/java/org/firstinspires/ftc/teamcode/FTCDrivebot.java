@@ -1,5 +1,5 @@
 //
-//  DriveTrain.java
+//  FTCDrivebot.java
 //  Robotics
 //
 //  Created by Nikhil Rasiah on 9/22/26.
@@ -18,9 +18,9 @@ import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import java.util.List;
+import android.util.Size;
 
 @TeleOp
-@Disabled
 public class FTCDrivebot extends LinearOpMode {
 
   private AprilTagProcessor aprilTag;
@@ -53,22 +53,33 @@ public class FTCDrivebot extends LinearOpMode {
     visionPortal = new VisionPortal.Builder()
       .setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"))
       .addProcessor(aprilTag)
-      .SetCameraResolution(new Size(640, 480))
+      .setCameraResolution(new Size(640, 480))
       .build();
     
     waitForStart();
 
     while (opModeIsActive()) {
-      double forward = -gamepad1.left_stick_y;
-      double turn = -gamepad1.right_stick_x;
-
-      double leftPower = forward + turn;
-      double rightPower = forward - turn;
-
-      double scale = Math.max(1.0, Math.max(Math.abs(leftPower), Math.abs(rightPower)));
-
-      leftPower /= scale;
-      rightPower /= scale;
+      double forward = -gamepad1.left_stick_y; 
+      double strafe = gamepad1.left_stick_x;
+      double turn = gamepad1.right_stick_x;
+      
+      // Calculate raw motor powers
+      double frontLeftPower  = forward + strafe + turn;
+      double backLeftPower   = forward - strafe + turn;
+      double frontRightPower = forward - strafe - turn;
+      double backRightPower  = forward + strafe - turn;
+      
+      // Find the largest power value to normalize if any exceed 1.0
+      double max = Math.max(1.0, Math.max(
+          Math.abs(frontLeftPower), Math.max(
+          Math.abs(backLeftPower), Math.max(
+          Math.abs(frontRightPower), Math.abs(backRightPower))))
+      );
+      
+      frontLeftPower  /= max;
+      backLeftPower   /= max;
+      frontRightPower /= max;
+      backRightPower  /= max;
       frontLeftMotor.setPower(leftPower);
       backLeftMotor.setPower(leftPower);
       frontRightMotor.setPower(rightPower);
