@@ -155,7 +155,7 @@ public class FTCDrivebot extends LinearOpMode {
     }
 
     private void closeCamera(CameraSession camera) {
-        if (camera != null) {
+        if (camera != null && camera.portal != null) {
             camera.portal.close();
         }
     }
@@ -231,7 +231,7 @@ public class FTCDrivebot extends LinearOpMode {
                 double frontRightPower = forward - strafe - turn;
                 double backRightPower = forward + strafe - turn;
 
-                // Scale all powers proportionally to keep values in 0-1 range
+                // Scale all powers proportionally to keep values in -1 --> 1 range
                 double max = Math.max(
                         1.0,
                         Math.max(
