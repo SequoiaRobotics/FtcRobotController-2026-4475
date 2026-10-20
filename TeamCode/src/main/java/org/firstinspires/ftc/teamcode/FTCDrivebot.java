@@ -76,7 +76,7 @@ public class FTCDrivebot extends LinearOpMode {
                 .addProcessor(processor)
                 // SDK 12 API. Disable RC previews to avoid sharing
                 // the default preview container between two portals.
-                .enableCameraMonitoring(false)
+                .enableLiveView(false)
                 .build();
 
         return new CameraSession(hardwareName, processor, portal);
