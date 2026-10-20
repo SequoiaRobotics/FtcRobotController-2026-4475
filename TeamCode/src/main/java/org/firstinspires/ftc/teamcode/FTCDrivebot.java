@@ -1,172 +1,282 @@
-//
-//  FTCDrivebot.java
-//  Robotics
-//
-//  Created by Nikhil Rasiah on 9/22/26.
-//
-// IMPORTS FROM FTC
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+import android.util.Size;
+
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
-import org.firstinspires.ftc.vision.VisionPortal;
-import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
-import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
-import org.firstinspires.ftc.vision.apriltag.AprilTagGameDatabase;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagClusterDetection;
+import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
+import org.firstinspires.ftc.vision.apriltag.AprilTagGameDatabase;
+import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 import java.util.List;
-import android.util.Size;
-
-
 
 @TeleOp
 public class FTCDrivebot extends LinearOpMode {
 
-  private AprilTagProcessor aprilTag;
-  private VisionPortal visionPortal;
-  
-  @Override
-  public void runOpMode() {
-    // Initialize hardware variables (motors)
-    DcMotor frontLeftMotor = hardwareMap.get(DcMotor.class, "frontLeft");
-    DcMotor backLeftMotor = hardwareMap.get(DcMotor.class, "backLeft");
-    DcMotor frontRightMotor = hardwareMap.get(DcMotor.class, "frontRight");
-    DcMotor backRightMotor = hardwareMap.get(DcMotor.class, "backRight");
+    // Set false when testing with only Webcam 1.
+    private static final boolean USE_SECOND_CAMERA = true;
 
-    // Reverse left motors
-    frontLeftMotor.setDirection(DcMotorSimple.Direction.REVERSE);
-    backLeftMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+    // Holds one camera's processor and portal together.
+    private static final class CameraSession {
+        final String name;
+        final AprilTagProcessor processor;
+        final VisionPortal portal;
 
-    // Set encoders
-    frontLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-    backLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-    frontRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-    backRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-    
-    // PLACEHOLDERS — replace after mounting the camera.
-    // Position in inches relative to the robot's chosen origin:
-    double cameraRight = 9;
-    double cameraForward = 9;
-    double cameraUp = 5;
-    
-    // Assumes an upright camera facing forward horizontally:
-    double cameraYaw = 0;
-    double cameraPitch = -90;
-    double cameraRoll = 0;
-
-    Position cameraPosition = new Position(
-      DistanceUnit.INCH,
-      cameraRight, cameraForward, cameraUp,
-      0
-    );
-
-    YawPitchRollAngles cameraOrientation = new YawPitchRollAngles(
-        AngleUnit.DEGREES,
-        cameraYaw, cameraPitch, cameraRoll,
-        0
-    );
-
-    // Create april tag processor + vision portal
-    aprilTag = new AprilTagProcessor.Builder()
-    .setTagLibrary(AprilTagGameDatabase.getBioBuzzTagLibrary())
-    .setCameraPose(cameraPosition, cameraOrientation)
-    .setOutputUnits(DistanceUnit.INCH, AngleUnit.DEGREES)
-    .build();
-    
-    // Initialize the vision portal
-    visionPortal = new VisionPortal.Builder()
-      .setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"))
-      .addProcessor(aprilTag)
-      .setCameraResolution(new Size(640, 480))
-      .build();
-    
-    waitForStart();
-
-    while (opModeIsActive()) {
-      double forward = -gamepad1.left_stick_y; 
-      double strafe = gamepad1.left_stick_x;
-      double turn = gamepad1.right_stick_x;
-
-      // Joy stick softening
-      forward = Math.copySign(forward * forward, forward);
-      strafe  = Math.copySign(strafe * strafe, strafe);
-      turn    = Math.copySign(turn * turn, turn);
-            
-      // Calculate raw motor powers
-      double frontLeftPower  = forward + strafe + turn;
-      double backLeftPower   = forward - strafe + turn;
-      double frontRightPower = forward - strafe - turn;
-      double backRightPower  = forward + strafe - turn;
-      
-      // Find the largest power value to normalize if any exceed 1.0
-      double max = Math.max(1.0, Math.max(
-          Math.abs(frontLeftPower), Math.max(
-          Math.abs(backLeftPower), Math.max(
-          Math.abs(frontRightPower), Math.abs(backRightPower))))
-      );
-      
-      frontLeftPower  /= max;
-      backLeftPower   /= max;
-      frontRightPower /= max;
-      backRightPower  /= max;
-      frontLeftMotor.setPower(frontLeftPower);
-      backLeftMotor.setPower(backLeftPower);
-      frontRightMotor.setPower(frontRightPower);
-      backRightMotor.setPower(backRightPower);
-
-      List<AprilTagDetection> currentDetections = aprilTag.getDetections();
-      telemetry.addData("# Detections", currentDetections.size());
-      
-      for (AprilTagDetection detection : currentDetections) {
-          // This OpMode displays BIOBUZZ clusters.
-          if (!(detection instanceof AprilTagClusterDetection)) {
-              continue;
-          }
-      
-          AprilTagClusterDetection cluster =
-              (AprilTagClusterDetection) detection;
-
-          // Add telemetry, and diagnose any obstructions
-          telemetry.addData("Cluster", cluster.metadata.name);
-          telemetry.addData("Tags visible", "%d%%", cluster.percentClusterFound);
-      
-          if (cluster.ftcPose == null) {
-              telemetry.addLine("Pose unavailable");
-              continue;
-          }
-
-          // Cell center relative to camera (position)
-          telemetry.addData(
-              "Opening relative to CAMERA (in)",
-              "X %.1f | Y %.1f | Z %.1f",
-              cluster.ftcPose.x,
-              cluster.ftcPose.y,
-              cluster.ftcPose.z
-          );
-
-          // Cell center relative to camera (pose)
-          telemetry.addData(
-              "Orientation (deg)",
-              "Pitch %.1f | Roll %.1f | Yaw %.1f",
-              cluster.ftcPose.pitch,
-              cluster.ftcPose.roll,
-              cluster.ftcPose.yaw
-          );
-      }
-      
-      telemetry.update();
+        CameraSession(
+                String name,
+                AprilTagProcessor processor,
+                VisionPortal portal) {
+            this.name = name;
+            this.processor = processor;
+            this.portal = portal;
+        }
     }
-    // Clean up resources when done
-    visionPortal.close();
-  }
+
+    private CameraSession initializeCamera(
+            String hardwareName,
+            Size resolution,
+            double right,
+            double forward,
+            double up,
+            double yaw,
+            double pitch,
+            double roll) {
+
+        Position cameraPosition = new Position(
+                DistanceUnit.INCH,
+                right, forward, up,
+                0
+        );
+
+        YawPitchRollAngles cameraOrientation = new YawPitchRollAngles(
+                AngleUnit.DEGREES,
+                yaw, pitch, roll,
+                0
+        );
+
+        AprilTagProcessor processor = new AprilTagProcessor.Builder()
+                .setTagLibrary(AprilTagGameDatabase.getBioBuzzTagLibrary())
+                .setCameraPose(cameraPosition, cameraOrientation)
+                .setOutputUnits(DistanceUnit.INCH, AngleUnit.DEGREES)
+                .build();
+
+        VisionPortal portal = new VisionPortal.Builder()
+                .setCamera(hardwareMap.get(WebcamName.class, hardwareName))
+                .setCameraResolution(resolution)
+                .addProcessor(processor)
+                // SDK 12 API. Disable RC previews to avoid sharing
+                // the default preview container between two portals.
+                .enableCameraMonitoring(false)
+                .build();
+
+        return new CameraSession(hardwareName, processor, portal);
+    }
+
+    private void addCameraTelemetry(CameraSession camera) {
+        if (camera == null) {
+            return;
+        }
+
+        String prefix = camera.name + " / ";
+
+        telemetry.addData(
+                prefix + "state",
+                camera.portal.getCameraState()
+        );
+        telemetry.addData(
+                prefix + "FPS",
+                "%.1f",
+                camera.portal.getFps()
+        );
+
+        List<AprilTagDetection> detections =
+                camera.processor.getDetections();
+
+        telemetry.addData(prefix + "detections", detections.size());
+
+        int index = 0;
+
+        for (AprilTagDetection detection : detections) {
+            index++;
+
+            if (!(detection instanceof AprilTagClusterDetection)) {
+                telemetry.addData(
+                        prefix + "detection " + index,
+                        "Standalone tag; skipped by cluster telemetry"
+                );
+                continue;
+            }
+
+            AprilTagClusterDetection cluster =
+                    (AprilTagClusterDetection) detection;
+
+            String target = prefix + index + " "
+                    + cluster.metadata.name + " / ";
+
+            telemetry.addData(
+                    target + "tags visible",
+                    "%d%%",
+                    cluster.percentClusterFound
+            );
+
+            if (cluster.ftcPose == null) {
+                telemetry.addData(target + "pose", "Unavailable");
+                continue;
+            }
+
+            // These measurements are relative to THIS camera.
+            // Do not directly average XYZ from different cameras.
+            telemetry.addData(
+                    target + "camera XYZ (in)",
+                    "%.1f, %.1f, %.1f",
+                    cluster.ftcPose.x,
+                    cluster.ftcPose.y,
+                    cluster.ftcPose.z
+            );
+
+            telemetry.addData(
+                    target + "pitch/roll/yaw (deg)",
+                    "%.1f, %.1f, %.1f",
+                    cluster.ftcPose.pitch,
+                    cluster.ftcPose.roll,
+                    cluster.ftcPose.yaw
+            );
+        }
+    }
+
+    private void closeCamera(CameraSession camera) {
+        if (camera != null) {
+            camera.portal.close();
+        }
+    }
+
+    @Override
+    public void runOpMode() {
+        DcMotor frontLeftMotor =
+                hardwareMap.get(DcMotor.class, "frontLeft");
+        DcMotor backLeftMotor =
+                hardwareMap.get(DcMotor.class, "backLeft");
+        DcMotor frontRightMotor =
+                hardwareMap.get(DcMotor.class, "frontRight");
+        DcMotor backRightMotor =
+                hardwareMap.get(DcMotor.class, "backRight");
+
+        frontLeftMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+        backLeftMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        frontLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        backLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        frontRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        backRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        CameraSession camera1 = null;
+        CameraSession camera2 = null;
+
+        try {
+            // PLACEHOLDERS: replace with measured mounting values.
+            // Arguments after resolution:
+            // right, forward, up (inches), yaw, pitch, roll (degrees).
+            camera1 = initializeCamera(
+                    "Webcam 1",
+                    new Size(640, 480),
+                    9, 9, 5,
+                    0, -90, 0
+            );
+
+            if (USE_SECOND_CAMERA) {
+                camera2 = initializeCamera(
+                        "Webcam 2",
+                        new Size(640, 480),
+                        -9, 9, 5,
+                        0, -90, 0
+                );
+            }
+
+            // Show camera diagnostics during INIT.
+            while (opModeInInit()) {
+                addCameraTelemetry(camera1);
+                addCameraTelemetry(camera2);
+                telemetry.update();
+                sleep(50);
+            }
+
+            waitForStart();
+
+            if (isStopRequested()) {
+                return;
+            }
+
+            while (opModeIsActive()) {
+                double forward = -gamepad1.left_stick_y;
+                double strafe = gamepad1.left_stick_x;
+                double turn = gamepad1.right_stick_x;
+
+                // Joystick softening, preserving direction.
+                forward = Math.copySign(forward * forward, forward);
+                strafe = Math.copySign(strafe * strafe, strafe);
+                turn = Math.copySign(turn * turn, turn);
+
+                double frontLeftPower = forward + strafe + turn;
+                double backLeftPower = forward - strafe + turn;
+                double frontRightPower = forward - strafe - turn;
+                double backRightPower = forward + strafe - turn;
+
+                // Scale all powers proportionally to keep values in 0-1 range
+                double max = Math.max(
+                        1.0,
+                        Math.max(
+                                Math.max(
+                                        Math.abs(frontLeftPower),
+                                        Math.abs(backLeftPower)
+                                ),
+                                Math.max(
+                                        Math.abs(frontRightPower),
+                                        Math.abs(backRightPower)
+                                )
+                        )
+                );
+
+                frontLeftPower /= max;
+                backLeftPower /= max;
+                frontRightPower /= max;
+                backRightPower /= max;
+
+                frontLeftMotor.setPower(frontLeftPower);
+                backLeftMotor.setPower(backLeftPower);
+                frontRightMotor.setPower(frontRightPower);
+                backRightMotor.setPower(backRightPower);
+
+                addCameraTelemetry(camera1);
+                addCameraTelemetry(camera2);
+                telemetry.update();
+
+                sleep(20);
+            }
+        } finally {
+            // Attempt camera cleanup even if motor cleanup throws.
+            try {
+                frontLeftMotor.setPower(0);
+                backLeftMotor.setPower(0);
+                frontRightMotor.setPower(0);
+                backRightMotor.setPower(0);
+            } finally {
+                // Attempt both closes even if one throws.
+                try {
+                    closeCamera(camera2);
+                } finally {
+                    closeCamera(camera1);
+                }
+            }
+        }
+    }
 }
