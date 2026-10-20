@@ -55,9 +55,9 @@ public class FTCDrivebot extends LinearOpMode {
     
     // PLACEHOLDERS — replace after mounting the camera.
     // Position in inches relative to the robot's chosen origin:
-    double cameraRight = 0;
-    double cameraForward = 0;
-    double cameraUp = 0;
+    double cameraRight = 9;
+    double cameraForward = 9;
+    double cameraUp = 5;
     
     // Assumes an upright camera facing forward horizontally:
     double cameraYaw = 0;
