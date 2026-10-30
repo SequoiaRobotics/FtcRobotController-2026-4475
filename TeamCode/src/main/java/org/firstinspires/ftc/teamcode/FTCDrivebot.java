@@ -23,10 +23,6 @@ import java.util.List;
 @TeleOp
 public class FTCDrivebot extends LinearOpMode {
 
-    // Set false when testing with only Webcam 1.
-    private static final boolean USE_SECOND_CAMERA = true;
-
-    // Holds one camera's processor and portal together.
     private static final class CameraSession {
         final String name;
         final AprilTagProcessor processor;
@@ -41,6 +37,7 @@ public class FTCDrivebot extends LinearOpMode {
             this.portal = portal;
         }
     }
+    
 
     private CameraSession initializeCamera(
             String hardwareName,
@@ -82,27 +79,25 @@ public class FTCDrivebot extends LinearOpMode {
         return new CameraSession(hardwareName, processor, portal);
     }
 
-    private void addCameraTelemetry(CameraSession camera) {
+   private void addCameraTelemetry(CameraSession camera) {
         if (camera == null) {
             return;
         }
 
         String prefix = camera.name + " / ";
 
+        //keeping status and UI compact
         telemetry.addData(
-                prefix + "state",
-                camera.portal.getCameraState()
-        );
-        telemetry.addData(
-                prefix + "FPS",
-                "%.1f",
+                prefix + "Status",
+                "State: %s | FPS: %.1f",
+                camera.portal.getCameraState(),
                 camera.portal.getFps()
         );
 
         List<AprilTagDetection> detections =
                 camera.processor.getDetections();
 
-        telemetry.addData(prefix + "detections", detections.size());
+        telemetry.addData(prefix + "Detections Found", detections.size());
 
         int index = 0;
 
@@ -110,50 +105,38 @@ public class FTCDrivebot extends LinearOpMode {
             index++;
 
             if (!(detection instanceof AprilTagClusterDetection)) {
-                telemetry.addData(
-                        prefix + "detection " + index,
-                        "Standalone tag; skipped by cluster telemetry"
-                );
+                //using single line instead of skipping a log line entirely
+                telemetry.addData(prefix + "Tag #" + index, "Standalone (Skipped)");
                 continue;
             }
 
             AprilTagClusterDetection cluster =
                     (AprilTagClusterDetection) detection;
 
-            String target = prefix + index + " "
-                    + cluster.metadata.name + " / ";
+            String targetName = (cluster.metadata != null) ? cluster.metadata.name : "ID " + cluster.id;
 
-            telemetry.addData(
-                    target + "tags visible",
-                    "%d%%",
-                    cluster.percentClusterFound
-            );
-
-            if (cluster.ftcPose == null) {
-                telemetry.addData(target + "pose", "Unavailable");
-                continue;
+            //combibging into clean & singleline summaries per tag
+            if (cluster.ftcPose != null) {
+                telemetry.addData(
+                        prefix + "Tag " + index + " [" + targetName + "]",
+                        "Vis: %d%% | XYZ(in): %.1f, %.1f, %.1f | R/P/Y: %.0f, %.0f, %.0f",
+                        (int) cluster.percentClusterFound,
+                        cluster.ftcPose.x,
+                        cluster.ftcPose.y,
+                        cluster.ftcPose.z,
+                        cluster.ftcPose.roll,
+                        cluster.ftcPose.pitch,
+                        cluster.ftcPose.yaw
+                );
+            } else {
+                telemetry.addData(
+                        prefix + "Tag " + index + " [" + targetName + "]",
+                        "Vis: %d%% | Pose Unavailable",
+                        (int) cluster.percentClusterFound
+                );
             }
-
-            // These measurements are relative to THIS camera.
-            // Do not directly average XYZ from different cameras.
-            telemetry.addData(
-                    target + "camera XYZ (in)",
-                    "%.1f, %.1f, %.1f",
-                    cluster.ftcPose.x,
-                    cluster.ftcPose.y,
-                    cluster.ftcPose.z
-            );
-
-            telemetry.addData(
-                    target + "pitch/roll/yaw (deg)",
-                    "%.1f, %.1f, %.1f",
-                    cluster.ftcPose.pitch,
-                    cluster.ftcPose.roll,
-                    cluster.ftcPose.yaw
-            );
         }
     }
-
     private void closeCamera(CameraSession camera) {
         if (camera != null && camera.portal != null) {
             camera.portal.close();
@@ -174,38 +157,38 @@ public class FTCDrivebot extends LinearOpMode {
         frontLeftMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         backLeftMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        frontLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        /* frontLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         backLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         frontRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        backRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        backRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER); */
+        
+        // using RUN_WITHOUT_ENCODER to maximize raw speed as said online
 
-        CameraSession camera1 = null;
-        CameraSession camera2 = null;
+        frontLeftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        backLeftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        frontRightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        backRightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        CameraSession webcam = null;
 
         try {
             // PLACEHOLDERS: replace with measured mounting values.
             // Arguments after resolution:
             // right, forward, up (inches), yaw, pitch, roll (degrees).
-            camera1 = initializeCamera(
+            webcam = initializeCamera(
                     "Webcam 1",
-                    new Size(640, 480),
-                    9, 9, 5,
-                    0, -90, 0
+                    new Size(1280, 720),
+                    0,  //right
+                    0,  //foreward
+                    5,  //up
+                    0,  //yaw
+                    45, //pitch
+                    0   //roll
             );
-
-            if (USE_SECOND_CAMERA) {
-                camera2 = initializeCamera(
-                        "Webcam 2",
-                        new Size(640, 480),
-                        -9, 9, 5,
-                        0, -90, 0
-                );
-            }
 
             // Show camera diagnostics during INIT.
             while (opModeInInit()) {
-                addCameraTelemetry(camera1);
-                addCameraTelemetry(camera2);
+                addCameraTelemetry(webcam);
                 telemetry.update();
                 sleep(50);
             }
@@ -256,8 +239,7 @@ public class FTCDrivebot extends LinearOpMode {
                 frontRightMotor.setPower(frontRightPower);
                 backRightMotor.setPower(backRightPower);
 
-                addCameraTelemetry(camera1);
-                addCameraTelemetry(camera2);
+                addCameraTelemetry(webcam);
                 telemetry.update();
 
                 sleep(20);
@@ -270,11 +252,8 @@ public class FTCDrivebot extends LinearOpMode {
                 frontRightMotor.setPower(0);
                 backRightMotor.setPower(0);
             } finally {
-                // Attempt both closes even if one throws.
-                try {
-                    closeCamera(camera2);
-                } finally {
-                    closeCamera(camera1);
+                    closeCamera(webcam);
+            
                 }
             }
         }
