@@ -64,7 +64,7 @@ public class DriveOmniTask<OpModeT extends AbstractOpMode<OpModeT>> extends Abst
     @Override
     public DriveOmniTask<OpModeT> init() {
         super.init();
-        this.frequencyMillis(10); // adjust motors every 10ms, 100/second
+        this.frequencyMillis(100); // adjust motors every 100ms, 10/second
         return this;
     }
 

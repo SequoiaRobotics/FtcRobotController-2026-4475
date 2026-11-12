@@ -18,7 +18,7 @@ public class DrivePovTask<OpModeT extends AbstractOpMode<OpModeT>> extends Drive
     public DrivePovTask<OpModeT> init() {
         RobotLog.ii(AbstractOpMode.GORILLA_CORE, "DrivePovTask init: start");
         super.init();
-        this.frequencyMillis(10); // adjust motors every 10ms, 100/second
+        this.frequencyMillis(100); // adjust motors every 100ms, 10/second
         RobotLog.ii(AbstractOpMode.GORILLA_CORE, "DrivePovTask init: done");
         return this;
     }

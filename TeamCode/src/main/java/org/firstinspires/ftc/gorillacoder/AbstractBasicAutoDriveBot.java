@@ -17,7 +17,8 @@ public abstract class AbstractBasicAutoDriveBot extends AbstractBasicDriveBot {
         @SuppressWarnings("unchecked")
         BotTask<AbstractBasicDriveBot>[] result = new BotTask[] {
             visionTask,
-            drivePovTask,
+            bulkReadTask,
+            drivePovTask, // initially POV drive mode. Other drive modes may be switched to later.
             new TelemetryTask()
         };
 

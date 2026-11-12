@@ -8,6 +8,7 @@ import com.qualcomm.robotcore.hardware.HardwareDevice;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.RobotLog;
 
+import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.vision.apriltag.AprilTagClusterDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagClusterMemberMetadata;
@@ -113,7 +114,7 @@ public abstract class AbstractOpMode<OpModeT extends OpMode> extends OpMode {
         double xcm = botStartInversionFactor * CM.fromUnit(position.unit, position.x);
         double ycm = botStartInversionFactor * CM.fromUnit(position.unit, position.y);
 
-        if ( ALLIANCES_ACROSS == fieldConfiguration ) {
+        if ( ALLIANCES_ACROSS == this.fieldConfiguration ) {
             if (ycm < -50) {
                 return Alliance.Red;
             } else if (FIELD_LENGTH_CM - 50 < ycm) {
@@ -121,7 +122,7 @@ public abstract class AbstractOpMode<OpModeT extends OpMode> extends OpMode {
             } else {
                 return Alliance.Unknown;
             }
-        } else if ( ALLIANCES_ADJACENT == fieldConfiguration ) {
+        } else if ( ALLIANCES_ADJACENT == this.fieldConfiguration ) {
             if (xcm < 2.54 * 12 && ycm < 2.54 * 12) {
                 // if the 'bot is in the corner tile, don't even bother guessing which alliance it is part of.
                 return Alliance.Unknown;
@@ -166,6 +167,21 @@ public abstract class AbstractOpMode<OpModeT extends OpMode> extends OpMode {
 
         alliance = allianceOwningFieldPosition(detection.robotPose.getPosition());
         blackboard.put("Alliance", alliance.toString());
+
+        return this;
+    }
+
+    protected AprilTagClusterDetection latestDetection;
+    protected long                     latestDetectionAcquisitionTime;
+
+
+    protected AbstractOpMode<OpModeT> setLatestFromDetection(AprilTagClusterDetection detection) {
+        if ( null == detection.ftcPose ) return this; // tag recognized, but could not get reliable pose data
+        if ( 0 == detection.robotPose.getPosition().acquisitionTime ) return this; // no acquisition time
+        if ( detection.robotPose.getPosition().acquisitionTime <= latestDetectionAcquisitionTime ) return this; // detection is older than latest
+
+        this.latestDetection                = detection;
+        this.latestDetectionAcquisitionTime = detection.robotPose.getPosition().acquisitionTime;
 
         return this;
     }

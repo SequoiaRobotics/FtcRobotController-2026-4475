@@ -1,18 +1,34 @@
 package org.firstinspires.ftc.gorillacoder;
 
-import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.DEGREES;
-
+import com.pedropathing.api.PoseFactory;
+import com.pedropathing.follower.Follower;
+import com.pedropathing.math.Pose;
+import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 
+import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.DEGREES;
+import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.RADIANS;
+
+import org.firstinspires.ftc.robotcore.external.Func;
+import org.firstinspires.ftc.robotcore.external.Function;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.vision.apriltag.AprilTagClusterDetection;
+import org.firstinspires.ftc.vision.apriltag.AprilTagPoseFtc;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TreeSet;
 
 @SuppressWarnings("unused")
 public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasicDriveBot> {
@@ -24,7 +40,102 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
 
     protected abstract void updateTelemetry();
 
-    protected void updateTelemetryLocations() {
+    protected static HashMap<String,Integer> tagsOrder        = new HashMap<>();
+    protected static HashMap<String,String>  tagsRightCaption = new HashMap<>();
+    protected static HashMap<String,String>  tagsLeftCaption  = new HashMap<>();
+
+    // Initialize tagsOrder, tagsRightCaption, and tagsLeftCaption.
+    {
+        String tagsInOrder[] = {
+            "RED AUDIENCE",   "RA",
+            "RED SCORING",    "RS",
+            "BLUE AUDIENCE",  "BA",
+            "BLUE SCORING",   "BS",
+            "Red",            "RD ",
+            "Blue",           "BL",
+            "Front",          "FR",
+            "Back",           "BK"
+        };
+
+        for (int index = 0; index < tagsInOrder.length; index += 2) {
+            String tagLong  = tagsInOrder[index];
+            String tagShort = tagsInOrder[index+1];
+            tagsOrder.put(tagLong, index);
+            tagsRightCaption.put(tagLong, "R"+tagShort);
+            tagsLeftCaption.put(tagLong, "L"+tagShort);
+        }
+    }
+
+    protected String locationFrom(AprilTagClusterDetection detection) {
+        if (null == detection) {
+            return "x:??? y:??? b:???";
+        } else {
+            Pose3D   robotPose = detection.robotPose;
+            Position position  = robotPose.getPosition();
+            long   at      = position.acquisitionTime;
+            double x       = position.x;
+            double y       = position.y;
+            double bearing = robotPose.getOrientation().getYaw(RADIANS);
+            return String.format(Locale.US, "x:%.0f y:%.0f h:%.0f @:%d", x, y, bearing, at);
+        }
+    };
+
+//    protected String bearingFrom(AprilTagClusterDetection detection) {
+//        if (null == detection) {
+//            return "b:??? r:??? y:???";
+//        } else {
+//            AprilTagPoseFtc tagPose = detection.ftcPose;
+//            long   at        = detection.frameAcquisitionNanoTime;
+//            double x         = tagPose.x;
+//            double y         = tagPose.y;
+//            double yaw       = tagPose.yaw;
+//            double elevation = tagPose.elevation;
+//            double bearing = tagPose.bearing;
+//            return String.format(Locale.US, "x:%.0f y:%.0f b:%.0f @:%d", x, y, bearing, at);
+//
+//            hiveRedAudienceLeft = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f b:%0f @:%d" ,
+//                redAudienceLeftDetection.ftcPose.bearing, redAudienceLeftDetection.ftcPose.range, redAudienceLeftDetection.ftcPose.yaw);
+//
+//        }
+//    };
+
+    protected void updateTelemetryGameLocations() {
+        // TO DO: Show detections for each camera/tag in the order seen, most recent first.
+        // This would be the most useful order for bot localization.
+        // A task would do the same, throwing out detections that are "too old".
+        // Too old should be determined by encoder distance traveled since the detection.
+        // Encoder distance traveled should be the some of all the encoders.
+        Comparator<String> tagComparator = (left, right) -> Integer.compare(tagsOrder.get(left), tagsOrder.get(right));
+        TreeSet<String> tagsAsSeen = new TreeSet<>(tagComparator);
+
+        visionTask.targetDetectionsLeft.keySet().forEach(
+            name -> tagsAsSeen.add(name)
+        );
+        visionTask.targetDetectionsRight.keySet().forEach(
+            name -> tagsAsSeen.add(name)
+        );
+
+        telemetry.addData("Position", "");
+        tagsAsSeen.forEach( (String tag) -> {
+            AprilTagClusterDetection detection;
+            detection= this.visionTask.targetDetectionsLeft.get(tag);
+            telemetry.addData( tagsLeftCaption.get(tag), locationFrom(detection) );
+            detection = this.visionTask.targetDetectionsRight.get(tag);
+            telemetry.addData( tagsRightCaption.get(tag), locationFrom(detection) );
+        });
+
+        telemetry.addData("Bearing", "");
+        tagsAsSeen.forEach( (String tag) -> {
+            AprilTagClusterDetection detection;
+            detection= this.visionTask.targetDetectionsLeft.get(tag);
+            telemetry.addData( tagsLeftCaption.get(tag), locationFrom(detection) );
+            detection = this.visionTask.targetDetectionsRight.get(tag);
+            telemetry.addData( tagsRightCaption.get(tag), locationFrom(detection) );
+        });
+    }
+
+    protected void updateTelemetryGameLocations0() {
+
 
         String BlueAudienceName = "BLUE AUDIENCE";
         String BlueScoringName  = "BLUE SCORING";
@@ -133,7 +244,44 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
         telemetry.addData("    BAR", "%s", hiveBlueAudienceRight);
     }
 
-    protected void updateTelemetryAprilTags() {
+    protected void updateTelemetryTestLocations() {
+
+        String redTagName    = "Red";
+        String blueTagName   = "Blue";
+        String frontTagName  = "Front";
+        String backTagName   = "Back";
+
+        // Red Tag seen from left camera
+        AprilTagClusterDetection redLeftDetection   = visionTask.targetDetectionsLeft.get(redTagName);
+        String redTagLeft    = "b:? r:? y:?";
+        String botRedTagLeft = "x:? y:? y:?";
+
+        if (null != redLeftDetection) {
+            redTagLeft = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
+                redLeftDetection.ftcPose.bearing, redLeftDetection.ftcPose.range, redLeftDetection.ftcPose.yaw);
+            botRedTagLeft = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
+                redLeftDetection.robotPose.getPosition().x, redLeftDetection.robotPose.getPosition().y, redLeftDetection.robotPose.getOrientation().getYaw(DEGREES));
+        }
+
+        // Blue Tag seen from left camera
+        AprilTagClusterDetection blueLeftDetection = visionTask.targetDetectionsLeft.get(redTagName);
+        String blueTagLeft = "b:? r:? y:?";
+        String botBlueTagLeft = "x:? y:? y:?";
+
+        if (null != blueLeftDetection) {
+            blueTagLeft = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
+                blueLeftDetection.ftcPose.bearing, blueLeftDetection.ftcPose.range, blueLeftDetection.ftcPose.yaw);
+            botBlueTagLeft = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
+                blueLeftDetection.robotPose.getPosition().x, blueLeftDetection.robotPose.getPosition().y, blueLeftDetection.robotPose.getOrientation().getYaw(DEGREES));
+        }
+
+        telemetry.addData("Bot RL", "%s", botRedTagLeft);
+        telemetry.addData("    BL", "%s", botBlueTagLeft);
+        telemetry.addData("Tag RL", "%s", redTagLeft);
+        telemetry.addData("    BL", "%s", blueTagLeft);
+    }
+
+    protected void updateTelemetryAprilTagNames() {
         telemetry.log().add("");
         telemetry.log().add("Left Camera AprilTag Names: ");
         visionTask.targetDetectionsLeft.keySet().forEach(
@@ -142,8 +290,8 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
         telemetry.log().add("Right Camera AprilTag Names: ");
         visionTask.targetDetectionsRight.keySet().forEach(
             name -> telemetry.log().add(name)
-        );    }
-
+        );
+    }
 
     //    protected class TelemetryTask extends TeleOpDriveTask {
     public class TelemetryTask extends BasicDriveTask {
@@ -157,17 +305,37 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
 
         @Override
         public TelemetryTask init() {
-            frequencyMillis(100); // Every 5 ms, 200/second.
+            frequencyMillis(500); // Twice per second.
             return this;
         }
 
         // TODO: add this to tasks, call for all tasks in AbstractOpMode.
+        @Override
         public TelemetryTask waitForStart() {
             run();
 
             return this;
         }
     } // class TelemetryTask
+
+    Pose pedroPoseFromRobotPose(Pose3D robotPose) {
+        DistanceUnit unit = this.latestDetection.robotPose.getPosition().unit;
+        double x          = unit.toInches( this.latestDetection.robotPose.getPosition().x ) ;
+        double y          = unit.toInches( this.latestDetection.robotPose.getPosition().y );
+        double heading    = this.latestDetection.robotPose.getOrientation().getYaw(RADIANS);
+
+        if ( ALLIANCES_ACROSS == this.fieldConfiguration) {
+            // Conversion from FTC coordinate system for a square field
+            x = 72 - x;
+            y = 72 + y;
+            heading = -Math.PI / 2 + heading;
+        } else {
+            throw new RuntimeException("TO DO: Update to work with a diamond field");
+        }
+
+        Pose result = PoseFactory.radians().of(x, y, heading);
+        return result;
+    }
 
     protected AbstractBasicDriveBot configureBot() {
         telemetry.log().setCapacity(100);
@@ -199,6 +367,10 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
 
         driveMode = DriveMode.DRIVE_POV;
 
+        if (null != this.latestDetection ) {
+            follower.setPose(pedroPoseFromRobotPose(this.latestDetection.robotPose));
+        }
+
         super.configureBot();
         return this;
     }
@@ -220,12 +392,13 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
     protected Map<DriveMode, AbstractDriveTask<AbstractBasicDriveBot>> driveTasks  = new HashMap<>();
     protected Map<DriveMode, DriveMode> nextDriveModeFor = new HashMap<>();
 
+    protected BulkReadTask                                 bulkReadTask   = new BulkReadTask();
     protected DriveMode                                    driveMode      = DriveMode.DRIVE_POV;
     protected DrivePovTask<AbstractBasicDriveBot>          drivePovTask   = new DrivePovTask<>();
 
-    protected DriveTankTask<AbstractBasicDriveBot>         driveTankTask   = new DriveTankTask<>();
+    protected DriveTankTask<AbstractBasicDriveBot>         driveTankTask  = new DriveTankTask<>();
 
-    protected DriveOmniTask<AbstractBasicDriveBot>         driveOmniTask   = new DriveOmniTask<>();
+    protected DriveOmniTask<AbstractBasicDriveBot>         driveOmniTask  = new DriveOmniTask<>();
 
     {
         nextDriveModeFor.put(DriveMode.DRIVE_TANK, DriveMode.DRIVE_POV);
@@ -236,6 +409,8 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
         driveTasks.put(DriveMode.DRIVE_POV,  drivePovTask);
         driveTasks.put(DriveMode.DRIVE_OMNI, driveOmniTask);
     }
+
+    protected Follower follower;
 
 } // abstract class AbstractBasicDriveBot
 

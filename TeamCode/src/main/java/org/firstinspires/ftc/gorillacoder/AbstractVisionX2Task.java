@@ -4,15 +4,20 @@ import static org.firstinspires.ftc.vision.VisionPortal.StreamFormat.MJPEG;
 
 import android.graphics.Color;
 
+import androidx.annotation.NonNull;
+
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.util.RobotLog;
 
+import org.firstinspires.ftc.gorillacoder.testing.TestTagLibraries;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.CameraName;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.VisionProcessor;
 import org.firstinspires.ftc.vision.apriltag.AprilTagClusterDetection;
+import org.firstinspires.ftc.vision.apriltag.AprilTagGameDatabase;
+import org.firstinspires.ftc.vision.apriltag.AprilTagLibrary;
 import org.firstinspires.ftc.vision.apriltag.AprilTagPoseFtc;
 import org.firstinspires.ftc.vision.apriltag.AprilTagPoseRaw;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
@@ -67,18 +72,18 @@ public abstract class AbstractVisionX2Task<OpModeT extends OpMode> extends Abstr
         return this;
     }
 
-    //  TODO: Move to AprilTagProcessorBuilder below.
     protected AprilTagProcessor.Builder createAprilTagProcessorBuilder() {
+        // TO DO: Don't assume which april tag library to use. It changes each season and this code must be season independent.
+        // Actual bots should set the tag library to use, which also handles the case of using a test tag library.
+//        return createAprilTagProcessorBuilder( AprilTagGameDatabase.getBioBuzzTagLibrary() );
+        return createAprilTagProcessorBuilder( new TestTagLibraries().createTagLibrary_WallBioBuzz2LeftClusterCentered() );
+    }
+
+    protected AprilTagProcessor.Builder createAprilTagProcessorBuilder(@NonNull AprilTagLibrary tagLibrary) {
         return new AprilTagProcessor.Builder()
-                // .setTagLibrary(tagLibrary)
+                .setTagLibrary(tagLibrary)
                 .setDrawAxes(true)
                 .setDrawCubeProjection(true)
-                // TODO: set where the camera is on the bot
-                //    private Position cameraPosition = new Position(DistanceUnit.INCH,
-                //            0, 0, 0, 0);
-                //    private YawPitchRollAngles cameraOrientation = new YawPitchRollAngles(AngleUnit.DEGREES,
-                //            0, -90, 0, 0);
-                // .setCameraPose(cameraPosition, cameraOrientation)
                 ;
     }
 

@@ -1,8 +1,11 @@
 package org.firstinspires.ftc.gorillacoder;
 
+import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.util.RobotLog;
+
+import java.util.List;
 
 // Tank Mode uses one stick to control each side of wheels.
 @SuppressWarnings("unused")
@@ -25,7 +28,7 @@ public class DriveTankTask<OpModeT extends AbstractOpMode<OpModeT>> extends Abst
     @Override
     public DriveTankTask<OpModeT> init() {
         super.init();
-        this.frequencyMillis(10); // adjust motors every 10ms, 100/second
+        this.frequencyMillis(100); // adjust motors every 100ms, 10/second
         return this;
     }
 
@@ -34,3 +37,5 @@ public class DriveTankTask<OpModeT extends AbstractOpMode<OpModeT>> extends Abst
     public double rightPower;
 
 } // class DriveTankTask
+
+

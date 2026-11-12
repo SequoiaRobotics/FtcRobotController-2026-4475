@@ -4,14 +4,22 @@ import static org.firstinspires.ftc.gorillacoder.AbstractBasicDriveBot.DriveMode
 import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.DEGREES;
 import static org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit.INCH;
 
+import com.qualcomm.ftccommon.configuration.RobotConfigFile;
+import com.qualcomm.ftccommon.configuration.RobotConfigFileManager;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.HardwareDevice;
 
+import org.firstinspires.ftc.gorillacoder.AbstractBasicDriveBot;
 import org.firstinspires.ftc.gorillacoder.AbstractBasicTeleOpDriveBot;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 
+import java.util.AbstractMap;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
+import java.util.stream.StreamSupport;
 
 @SuppressWarnings("unused")
 @TeleOp
@@ -42,35 +50,57 @@ public class GorillaDriveBot extends AbstractBasicTeleOpDriveBot {
             driveTankTask.rightPower = gamepad1.right_stick_y;
             break;
         case DRIVE_OMNI:
-            driveOmniTask.axial   = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
-            driveOmniTask.lateral = gamepad1.left_stick_x;
-            driveOmniTask.yaw     = gamepad1.right_stick_x;
+            driveOmniTask.axial   = gamepad1.left_stick_y;
+            driveOmniTask.lateral = -gamepad1.left_stick_x;
+            driveOmniTask.yaw     = -gamepad1.right_stick_x;
             break;
         }
 
         if (gamepad1.left_bumper) {
-            telemetryMode = TelemetryMode.TELEMETRY_LOCATIONS;
+            telemetryMode = TelemetryMode.TELEMETRY_GAME_LOCATIONS;
         } else if (gamepad1.right_bumper) {
             telemetryMode = TelemetryMode.TELEMETRY_APRIL_TAG_NAMES;
         }
     }
 
     protected enum TelemetryMode {
-        TELEMETRY_LOCATIONS,
+        TELEMETRY_GAME_LOCATIONS,
+        TELEMETRY_TEST_LOCATIONS,
         TELEMETRY_APRIL_TAG_NAMES
     }
-    protected TelemetryMode telemetryMode = TelemetryMode.TELEMETRY_LOCATIONS;
+    protected TelemetryMode telemetryMode = TelemetryMode.TELEMETRY_GAME_LOCATIONS;
     protected Map<TelemetryMode, TelemetryMode> nextTelemetryModeFor = new HashMap<>();
     {
-        nextTelemetryModeFor.put(TelemetryMode.TELEMETRY_LOCATIONS,       TelemetryMode.TELEMETRY_APRIL_TAG_NAMES);
-        nextTelemetryModeFor.put(TelemetryMode.TELEMETRY_APRIL_TAG_NAMES, TelemetryMode.TELEMETRY_LOCATIONS);
+        nextTelemetryModeFor.put(TelemetryMode.TELEMETRY_GAME_LOCATIONS,  TelemetryMode.TELEMETRY_TEST_LOCATIONS);
+        nextTelemetryModeFor.put(TelemetryMode.TELEMETRY_TEST_LOCATIONS,  TelemetryMode.TELEMETRY_APRIL_TAG_NAMES);
+        nextTelemetryModeFor.put(TelemetryMode.TELEMETRY_APRIL_TAG_NAMES, TelemetryMode.TELEMETRY_GAME_LOCATIONS);
     }
 
     @Override
     protected void updateTelemetry() {
         telemetry.log().clear();
 
+        String last = "duration:??? distance:???";
+        String location = "x:??? y:??? h:???";
+
+        if ( null != this.latestDetection && null != this.latestDetection.robotPose ) {
+
+            last = String.format(
+                Locale.US,
+                "duration:%d distance:???", // TO DO: distance from encoders since last detection
+                System.nanoTime() - this.latestDetectionAcquisitionTime
+            );
+            location = String.format(
+                Locale.US,
+                "x:%0.2d y:%0.2d h:%0.2d",
+                this.latestDetection.robotPose.getPosition().x,
+                this.latestDetection.robotPose.getPosition().y,
+                this.latestDetection.robotPose.getOrientation().getYaw()
+            );
+        }
         telemetry.addData("Status", "%s alliance running %s", alliance, runtime);
+        telemetry.addData( "Last", "%s",     last);
+        telemetry.addData("Location", "%s",  location );
         telemetry.addData("Camera", "%s %s", visionTask.portalLeft.getCameraState() , visionTask.portalRight.getCameraState());
 
         switch (driveMode) {
@@ -94,19 +124,60 @@ public class GorillaDriveBot extends AbstractBasicTeleOpDriveBot {
                 telemetry.addData("WEIRD MOTOR MODE", "");
         }
 
-        switch (telemetryMode) {
-            case TELEMETRY_LOCATIONS:
-                updateTelemetryLocations();
-                break;
-            case TELEMETRY_APRIL_TAG_NAMES:
-                updateTelemetryAprilTags();
-                break;
-        }
+        updateTelemetryGameLocations();
+
+//        switch (telemetryMode) {
+//            case TELEMETRY_GAME_LOCATIONS:
+//                updateTelemetryGameLocations();
+//                break;
+//            case TELEMETRY_TEST_LOCATIONS:
+//                updateTelemetryTestLocations();
+//                break;
+//            case TELEMETRY_APRIL_TAG_NAMES:
+//                updateTelemetryAprilTagNames();
+//                break;
+//        }
+
+        if (this.running) return;
+
+        telemetry.addData( "config", getActiveConfigName() );
+        hardwareMap.getAllNames(HardwareDevice.class).stream()
+            .map(name -> new AbstractMap.SimpleEntry<>(name, hardwareMap.get(name)))
+            .sorted(Comparator.comparing(
+                mapping -> mapping.getValue().getConnectionInfo(),
+                Comparator.nullsLast(String::compareToIgnoreCase)
+            ))
+            .forEach(mapping -> {
+                telemetry.addData(mapping.getKey(), mapping.getValue().getConnectionInfo());
+            });
     }
+
+    // TO DO: Move run state to AbstractOpMode.
+    // Investigate using OpModeManagerNotifier
+    private boolean running = false;
+    public void loop() {
+        super.loop();
+        running = true;
+    }
+
+    private String getActiveConfigName() {
+        RobotConfigFileManager configFileManager = new RobotConfigFileManager();
+        RobotConfigFile activeConfig = configFileManager.getActiveConfig();
+        return activeConfig.getName();
+    }
+
     @Override
     protected GorillaDriveBot configureAprilTagProcessors() {
         visionTask.atpBuilderLeft. setCameraPose(cameraPositionLeft,  cameraOrientationLeft);
         visionTask.atpBuilderRight.setCameraPose(cameraPositionRight, cameraOrientationRight);
+
+        return this;
+    }
+
+    protected AbstractBasicDriveBot configureBot() {
+        super.configureBot();
+
+//        TBD: follower = GorillaDriveConstants.create(hardwareMap);
 
         return this;
     }
@@ -119,90 +190,4 @@ public class GorillaDriveBot extends AbstractBasicTeleOpDriveBot {
         cameraOrientationRight = new YawPitchRollAngles(DEGREES, 0, -90, 0, 0);
     }
 
-} // class GorillaDriveBot2
-
-// 2025 code
-//@Override
-//protected void updateTelemetry() {
-//    telemetry.addData("Status", "Version 1. %s alliance running %s", alliance, runtime);
-//    telemetry.addData("Camera", "%s %s", visionTask.portalLeft.getCameraState() , visionTask.portalRight.getCameraState());
-//    telemetry.addData("Motors", "speed:%.2f  turn:%.2f", drivePovTask.speed, drivePovTask.turnRate);
-//    telemetry.addData("Motors", " left:%.2f right:%.2f", drivePovTask.leftPower, drivePovTask.rightPower);
-//
-//        // Red Tower seen from left camera
-//        AprilTagDetection redLeftDetection   = visionTask.targetDetectionsLeft.get("24");
-//        String            towerRedLeft       = "b:? r:? y:?";
-//        String            botRedLeft         = "x:? y:? y:?";
-//        // Blue Tower seen from left camera
-//        AprilTagDetection blueLeftDetection  = visionTask.targetDetectionsLeft.get("20");
-//        String            towerBlueLeft      = "b:? r:? y:?";
-//        String            botBlueLeft        = "x:? y:? y:?";
-//        // Red Tower seen from right camera
-//        AprilTagDetection redRightDetection  = visionTask.targetDetectionsRight.get("24");
-//        String            towerRedRight      = "b:? r:? y:?";
-//        String            botRedRight        = "x:? y:? y:?";
-//        // Blue Tower seen from right camera
-//        AprilTagDetection blueRightDetection = visionTask.targetDetectionsRight.get("20");
-//        String            towerBlueRight     = "b:? r:? y:?";
-//        String            botBlueRight       = "x:? y:? y:?";
-//
-//        if (null != redLeftDetection) {
-//            towerRedLeft = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
-//                redLeftDetection.ftcPose.bearing, redLeftDetection.ftcPose.range, redLeftDetection.ftcPose.yaw);
-//            botRedLeft = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
-//                redLeftDetection.robotPose.getPosition().x, redLeftDetection.robotPose.getPosition().y, redLeftDetection.robotPose.getOrientation().getYaw(DEGREES));
-//        }
-//        if (null != blueLeftDetection) {
-//            towerBlueLeft = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
-//                blueLeftDetection.ftcPose.bearing, blueLeftDetection.ftcPose.range, blueLeftDetection.ftcPose.yaw);
-//            botBlueLeft = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
-//                blueLeftDetection.robotPose.getPosition().x, blueLeftDetection.robotPose.getPosition().y, blueLeftDetection.robotPose.getOrientation().getYaw(DEGREES));
-//        }
-//        if (null != redRightDetection) {
-//            towerRedRight = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
-//                redRightDetection.ftcPose.bearing, redRightDetection.ftcPose.range, redRightDetection.ftcPose.yaw);
-//            botRedRight = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
-//                redRightDetection.robotPose.getPosition().x, redRightDetection.robotPose.getPosition().y, redRightDetection.robotPose.getOrientation().getYaw(DEGREES));
-//        }
-//        if (null != blueRightDetection) {
-//            towerBlueRight = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
-//                blueRightDetection.ftcPose.bearing, blueRightDetection.ftcPose.range, blueRightDetection.ftcPose.yaw);
-//            botBlueRight = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
-//                blueRightDetection.robotPose.getPosition().x, blueRightDetection.robotPose.getPosition().y, blueRightDetection.robotPose.getOrientation().getYaw(DEGREES));
-//        }
-//
-//        // Update blob data
-//
-//        List<Blob> greenBlobs     = blobLocatorGreenRight.getBlobs();
-//        List<Blob> purpleBlobs    = blobLocatorPurpleLeft.getBlobs();
-//        String     greenBlobInfo  = " 0 #1: (  ?,   ?)\na:    d:     r:     l:      c:";
-//        String     purpleBlobInfo = " 0 #1: (  ?,   ?)\na:    d:     r:     l:      c:";
-//        if (!greenBlobs.isEmpty()) {
-//            Blob blob = greenBlobs.get(0);
-//            greenBlobInfo = String.format(
-//                Locale.US, "%2d #1: (%3.0f, %3.0f)\na:%3d d:%.2f r:%.2f l:%6.2f c:%.2f",
-//                greenBlobs.size(), blob.getCircle().getX(), blob.getCircle().getY(),
-//                blob.getContourArea(), blob.getDensity(), blob.getAspectRatio(), blob.getArcLength(), blob.getCircularity()
-//            );
-//        }
-//        if (!purpleBlobs.isEmpty()) {
-//            Blob blob = purpleBlobs.get(0);
-//            purpleBlobInfo = String.format(
-//                Locale.US, "%2d #1: (%3.0f, %3.0f)\na:%3d d:%.2f r:%.2f l:%6.2f c:%.2f",
-//                purpleBlobs.size(), blob.getCircle().getX(), blob.getCircle().getY(),
-//                blob.getContourArea(), blob.getDensity(), blob.getAspectRatio(), blob.getArcLength(), blob.getCircularity()
-//            );
-//        }
-//
-//        telemetry.addData("Bot RL", "%s", botRedLeft);
-//        telemetry.addData("    RR", "%s", botRedRight);
-//        telemetry.addData("    BL", "%s", botBlueLeft);
-//        telemetry.addData("    BR", "%s", botBlueRight);
-//        telemetry.addData("Twr RL", "%s", towerRedLeft);
-//        telemetry.addData("    RR", "%s", towerRedRight);
-//        telemetry.addData("    BL", "%s", towerBlueLeft);
-//        telemetry.addData("    BR", "%s", towerBlueRight);
-//        telemetry.addData("Green ", "%s", greenBlobInfo);
-//        telemetry.addData("Purple", "%s", purpleBlobInfo);
-//}
-
+} // class GorillaDriveBot
