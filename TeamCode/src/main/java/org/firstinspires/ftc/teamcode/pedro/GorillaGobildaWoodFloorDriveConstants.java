@@ -19,7 +19,9 @@ import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
-public class GorillaDriveConstants {
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+
+public class GorillaGobildaWoodFloorDriveConstants {
     public static MecanumConfig drivetrainConfig = new MecanumConfig(
         config -> {
             config.frontLeftName.set("Drive Front Left");
@@ -46,48 +48,48 @@ public class GorillaDriveConstants {
         }
     );
 
-    public static PinpointConfig pingpointConfig = new PinpointConfig(
-        config -> {
-            config.name.set("pinpoint");
-            config.xPodOffset.set(2.187);
-            config.yPodOffset.set(-4.572);
-            config.xPodDirection.set(GoBildaPinpointDriver.EncoderDirection.FORWARD);
-            config.yPodDirection.set(GoBildaPinpointDriver.EncoderDirection.FORWARD);
-        }
-    );
+    public static PinpointConfig pinpointConfig = new PinpointConfig(c -> {
+        c.name.set("pinpoint");
+        c.podType.set(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
+        c.xPodDirection.set(GoBildaPinpointDriver.EncoderDirection.REVERSED);
+        c.yPodDirection.set(GoBildaPinpointDriver.EncoderDirection.FORWARD);
+        c.globalDistanceUnit.set(DistanceUnit.INCH);
+        c.offsetUnits.set(DistanceUnit.INCH);
+        c.xPodOffset.set(2.5851539551742433);
+        c.yPodOffset.set(0.7005141100545568);
+    });
 
     public static ForesightConfig foresightConfig = new ForesightConfig(
-        config -> {
-            Controller primaryTranslationalForward = Controller.proportional(0.3);
-            Controller secondaryTranslationalForward = Controller.proportional(0.1);
-            Controller primaryTranslationalLateral = Controller.proportional(0.3);
-            Controller secondaryTranslationalLateral = Controller.proportional(0.1);
+        c -> {
+            Controller primaryTranslationalForward = Controller.proportional(  0.2743562706583265);
+            Controller secondaryTranslationalForward = Controller.proportional(0.10136731107368391);
+            Controller primaryTranslationalLateral = Controller.proportional(  0.3792459408802851);
+            Controller secondaryTranslationalLateral = Controller.proportional(0.14012124151709116);
 
-            config.forwardTranslational.set(Controller.piecewise(secondaryTranslationalForward).put(2.5, primaryTranslationalForward));
-            config.strafeTranslational.set(Controller.piecewise(secondaryTranslationalLateral).put(2.5, primaryTranslationalLateral));
+            c.forwardTranslational.set(Controller.piecewise(secondaryTranslationalForward).put(2.5, primaryTranslationalForward));
+            c.strafeTranslational.set(Controller.piecewise(secondaryTranslationalLateral).put( 2.5, primaryTranslationalLateral));
 
-            config.coast.set(Controller.proportionalFeedforward(0.010978350889324107));
-            config.brake.set(Controller.proportionalFeedforward(0.008731598255925491));
+            c.coast.set(Controller.proportionalFeedforward(0.017815241471564033));
+            c.brake.set(Controller.proportionalFeedforward(0.015142955250829428));
 
-            config.headingFeedback.set(Controller.proportional(5.258721785960744));
-            config.headingBrakeCoefficients.set(Vector2D.cartesian(0.05642143125655298, 0.0063829525363003695));
+            c.headingFeedback.set(Controller.proportional(   3.2475975872320446));
+            c.headingBrakeCoefficients.set(Vector2D.cartesian(0.04371390636724927, 0.013456523701095657));
 
-            config.linearBrakeCoefficients.set(Matrix.diag(0.10605894992901523, 0.08719146175596092));
-            config.quadraticBrakeCoefficients.set(Matrix.diag(0.0014663966976606565, 0.0013837064502458813));
+            c.linearBrakeCoefficients.set(Matrix.diag(    0.021165181104493735, 0.01954096756876752));
+            c.quadraticBrakeCoefficients.set(Matrix.diag(-1.33224602965156E-4,  0.00490427652681007));
 
-            config.maxAchievableForwardVelocity.set(72.72923108818539);
-            config.maxAchievableStrafeVelocity.set(52.34323936525474);
-            config.naturalForwardDeceleration.set(85.01144677379789);
-            config.naturalStrafeDeceleration.set(104.49787535782846);
+            c.maxAchievableForwardVelocity.set(57.52897618837416);
+            c.maxAchievableStrafeVelocity.set( 49.77290756058593);
+            c.naturalForwardDeceleration.set(  26.361821088461316);
+            c.naturalStrafeDeceleration.set(   39.000065875624685);
         }
     );
-
     public static Follower create(HardwareMap hardwareMap) {
         OTOSLocalizer otosLocalizer = new OTOSLocalizer(hardwareMap, otosConfig);
         return new Follower(
-            new PinpointLocalizer(hardwareMap, pingpointConfig),
+            new PinpointLocalizer(hardwareMap, pinpointConfig),
             new Mecanum(hardwareMap, drivetrainConfig),
             new Foresight(foresightConfig)
         );
     }
-} // class Constants
+} // class GorillaGobildaWoodFloorDriveConstants
