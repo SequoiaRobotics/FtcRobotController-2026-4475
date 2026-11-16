@@ -75,8 +75,8 @@ public abstract class AbstractVisionX2Task<OpModeT extends OpMode> extends Abstr
     protected AprilTagProcessor.Builder createAprilTagProcessorBuilder() {
         // TO DO: Don't assume which april tag library to use. It changes each season and this code must be season independent.
         // Actual bots should set the tag library to use, which also handles the case of using a test tag library.
-//        return createAprilTagProcessorBuilder( AprilTagGameDatabase.getBioBuzzTagLibrary() );
-        return createAprilTagProcessorBuilder( new TestTagLibraries().createTagLibrary_WallBioBuzz2LeftClusterCentered() );
+        return createAprilTagProcessorBuilder( AprilTagGameDatabase.getBioBuzzTagLibrary() );
+//        return createAprilTagProcessorBuilder( new TestTagLibraries().createTagLibrary_WallBioBuzz2LeftClusterCentered() );
     }
 
     protected AprilTagProcessor.Builder createAprilTagProcessorBuilder(@NonNull AprilTagLibrary tagLibrary) {

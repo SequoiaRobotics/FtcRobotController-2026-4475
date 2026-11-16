@@ -15,7 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @SuppressWarnings("unused")
-@Autonomous
+@Autonomous( name="Gorilla Pedro Auto", preselectTeleOp = "GorillaDriveBot")
 public class GorillaPedroAutoBot extends AbstractBasicTeleOpDriveBot {
 
     protected double lastDriveModeSwitchTime = getRuntime();
@@ -43,9 +43,9 @@ public class GorillaPedroAutoBot extends AbstractBasicTeleOpDriveBot {
             driveTankTask.rightPower = gamepad1.right_stick_y;
             break;
         case DRIVE_OMNI:
-            driveOmniTask.axial   = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
-            driveOmniTask.lateral = gamepad1.left_stick_x;
-            driveOmniTask.yaw     = gamepad1.right_stick_x;
+            driveOmniTask.axial   = -gamepad1.right_stick_y;  // Note: pushing stick forward gives negative value
+            driveOmniTask.lateral = gamepad1.right_stick_x;
+            driveOmniTask.yaw     = gamepad1.left_stick_x;
             break;
         }
 
@@ -97,7 +97,7 @@ public class GorillaPedroAutoBot extends AbstractBasicTeleOpDriveBot {
 
         switch (telemetryMode) {
             case TELEMETRY_LOCATIONS:
-                updateTelemetryGameLocations();
+                updateTelemetryLocations();
                 break;
             case TELEMETRY_APRIL_TAG_NAMES:
                 updateTelemetryAprilTagNames();

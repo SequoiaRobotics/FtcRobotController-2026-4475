@@ -3,29 +3,23 @@ package org.firstinspires.ftc.gorillacoder;
 import com.pedropathing.api.PoseFactory;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
-import com.qualcomm.hardware.lynx.LynxModule;
+import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.DEGREES;
 import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.RADIANS;
 
-import org.firstinspires.ftc.robotcore.external.Func;
-import org.firstinspires.ftc.robotcore.external.Function;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
+import org.firstinspires.ftc.teamcode.pedro.GorillaGobildaWoodFloorDriveConstants;
 import org.firstinspires.ftc.vision.apriltag.AprilTagClusterDetection;
-import org.firstinspires.ftc.vision.apriltag.AprilTagPoseFtc;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeSet;
@@ -99,7 +93,7 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
 //        }
 //    };
 
-    protected void updateTelemetryGameLocations() {
+    protected void updateTelemetryLocations() {
         // TO DO: Show detections for each camera/tag in the order seen, most recent first.
         // This would be the most useful order for bot localization.
         // A task would do the same, throwing out detections that are "too old".
@@ -115,7 +109,7 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
             name -> tagsAsSeen.add(name)
         );
 
-        telemetry.addData("Position", "");
+        telemetry.addData("Tag Position", "");
         tagsAsSeen.forEach( (String tag) -> {
             AprilTagClusterDetection detection;
             detection= this.visionTask.targetDetectionsLeft.get(tag);
@@ -124,7 +118,7 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
             telemetry.addData( tagsRightCaption.get(tag), locationFrom(detection) );
         });
 
-        telemetry.addData("Bearing", "");
+        telemetry.addData("Tag Bearing", "");
         tagsAsSeen.forEach( (String tag) -> {
             AprilTagClusterDetection detection;
             detection= this.visionTask.targetDetectionsLeft.get(tag);
@@ -132,153 +126,6 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
             detection = this.visionTask.targetDetectionsRight.get(tag);
             telemetry.addData( tagsRightCaption.get(tag), locationFrom(detection) );
         });
-    }
-
-    protected void updateTelemetryGameLocations0() {
-
-
-        String BlueAudienceName = "BLUE AUDIENCE";
-        String BlueScoringName  = "BLUE SCORING";
-        String RedAudienceName  = "RED AUDIENCE";
-        String RedScoringName   = "RED SCORING";
-
-        // Red Hive seen from left camera
-        AprilTagClusterDetection redAudienceLeftDetection   = visionTask.targetDetectionsLeft.get(RedAudienceName);
-        String                   hiveRedAudienceLeft        = "b:? r:? y:?";
-        String                   botRedAudienceLeft         = "x:? y:? y:?";
-        AprilTagClusterDetection redScoringLeftDetection    = visionTask.targetDetectionsLeft.get(RedScoringName);
-        String                   hiveRedScoringLeft         = "b:? r:? y:?";
-        String                   botRedScoringLeft          = "x:? y:? y:?";
-
-        if (null != redAudienceLeftDetection) {
-            hiveRedAudienceLeft = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
-                redAudienceLeftDetection.ftcPose.bearing, redAudienceLeftDetection.ftcPose.range, redAudienceLeftDetection.ftcPose.yaw);
-            botRedAudienceLeft = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
-                redAudienceLeftDetection.robotPose.getPosition().x, redAudienceLeftDetection.robotPose.getPosition().y, redAudienceLeftDetection.robotPose.getOrientation().getYaw(DEGREES));
-        }
-        if (null != redScoringLeftDetection) {
-            hiveRedScoringLeft = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
-                redScoringLeftDetection.ftcPose.bearing, redScoringLeftDetection.ftcPose.range, redScoringLeftDetection.ftcPose.yaw);
-            botRedScoringLeft = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
-                redScoringLeftDetection.robotPose.getPosition().x, redScoringLeftDetection.robotPose.getPosition().y, redScoringLeftDetection.robotPose.getOrientation().getYaw(DEGREES));
-        }
-
-        // Red Hive seen from right camera
-        AprilTagClusterDetection redAudienceRightDetection  = visionTask.targetDetectionsRight.get(RedAudienceName);
-        String                   hiveRedAudienceRight       = "b:? r:? y:?";
-        String                   botRedAudienceRight        = "x:? y:? y:?";
-        AprilTagClusterDetection redScoringRightDetection   = visionTask.targetDetectionsRight.get(RedScoringName);
-        String                   hiveRedScoringRight        = "b:? r:? y:?";
-        String                   botRedScoringRight         = "x:? y:? y:?";
-
-        if (null != redAudienceRightDetection) {
-            hiveRedAudienceRight = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
-                redAudienceRightDetection.ftcPose.bearing, redAudienceRightDetection.ftcPose.range, redAudienceRightDetection.ftcPose.yaw);
-            botRedAudienceRight = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
-                redAudienceRightDetection.robotPose.getPosition().x, redAudienceRightDetection.robotPose.getPosition().y, redAudienceRightDetection.robotPose.getOrientation().getYaw(DEGREES));
-        }
-        if (null != redScoringRightDetection) {
-            hiveRedScoringRight = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
-                redScoringRightDetection.ftcPose.bearing, redScoringRightDetection.ftcPose.range, redScoringRightDetection.ftcPose.yaw);
-            botRedScoringRight = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
-                redScoringRightDetection.robotPose.getPosition().x, redScoringRightDetection.robotPose.getPosition().y, redScoringRightDetection.robotPose.getOrientation().getYaw(DEGREES));
-        }
-
-        // Blue Hive seen from left camera
-        AprilTagClusterDetection blueAudienceLeftDetection  = visionTask.targetDetectionsLeft.get(BlueAudienceName);
-        String                   hiveBlueAudienceLeft       = "b:? r:? y:?";
-        String                   botBlueAudienceLeft        = "x:? y:? y:?";
-        AprilTagClusterDetection blueScoringLeftDetection   = visionTask.targetDetectionsLeft.get(BlueScoringName);
-        String                   hiveBlueScoringLeft        = "b:? r:? y:?";
-        String                   botBlueScoringLeft         = "x:? y:? y:?";
-
-        if (null != blueAudienceLeftDetection) {
-            hiveBlueAudienceLeft = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
-                blueAudienceLeftDetection.ftcPose.bearing, blueAudienceLeftDetection.ftcPose.range, blueAudienceLeftDetection.ftcPose.yaw);
-            botBlueAudienceLeft = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
-                blueAudienceLeftDetection.robotPose.getPosition().x, blueAudienceLeftDetection.robotPose.getPosition().y, blueAudienceLeftDetection.robotPose.getOrientation().getYaw(DEGREES));
-        }
-        if (null != blueScoringLeftDetection) {
-            hiveBlueScoringLeft = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
-                blueScoringLeftDetection.ftcPose.bearing, blueScoringLeftDetection.ftcPose.range, blueScoringLeftDetection.ftcPose.yaw);
-            botBlueScoringLeft = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
-                blueScoringLeftDetection.robotPose.getPosition().x, blueScoringLeftDetection.robotPose.getPosition().y, blueScoringLeftDetection.robotPose.getOrientation().getYaw(DEGREES));
-        }
-
-        // Blue Hive seen from right camera
-        AprilTagClusterDetection blueAudienceRightDetection = visionTask.targetDetectionsRight.get(BlueAudienceName);
-        String                   hiveBlueAudienceRight      = "b:? r:? y:?";
-        String                   botBlueAudienceRight       = "x:? y:? y:?";
-        AprilTagClusterDetection blueScoringRightDetection  = visionTask.targetDetectionsRight.get(BlueScoringName);
-        String                   hiveBlueScoringRight       = "b:? r:? y:?";
-        String                   botBlueScoringRight        = "x:? y:? y:?";
-
-        if (null != blueAudienceRightDetection) {
-            hiveBlueAudienceRight = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
-                blueAudienceRightDetection.ftcPose.bearing, blueAudienceRightDetection.ftcPose.range, blueAudienceRightDetection.ftcPose.yaw);
-            botBlueAudienceRight = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
-                blueAudienceRightDetection.robotPose.getPosition().x, blueAudienceRightDetection.robotPose.getPosition().y, blueAudienceRightDetection.robotPose.getOrientation().getYaw(DEGREES));
-        }
-        if (null != blueScoringRightDetection) {
-            hiveBlueScoringRight = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
-                blueScoringRightDetection.ftcPose.bearing, blueScoringRightDetection.ftcPose.range, blueScoringRightDetection.ftcPose.yaw);
-            botBlueScoringRight = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
-                blueScoringRightDetection.robotPose.getPosition().x, blueScoringRightDetection.robotPose.getPosition().y, blueScoringRightDetection.robotPose.getOrientation().getYaw(DEGREES));
-        }
-
-        telemetry.addData("Bot RSL", "%s", botRedScoringLeft);
-        telemetry.addData("    RSR", "%s", botRedScoringRight);
-        telemetry.addData("    RAL", "%s", botRedAudienceLeft);
-        telemetry.addData("    RAR", "%s", botRedAudienceRight);
-        telemetry.addData("    BSL", "%s", botBlueScoringLeft);
-        telemetry.addData("    BSR", "%s", botBlueScoringRight);
-        telemetry.addData("    BAL", "%s", botBlueAudienceLeft);
-        telemetry.addData("    BAR", "%s", botBlueAudienceRight);
-        telemetry.addData("Hiv RSL", "%s", hiveRedScoringLeft);
-        telemetry.addData("    RSR", "%s", hiveRedScoringRight);
-        telemetry.addData("    RAL", "%s", hiveRedAudienceLeft);
-        telemetry.addData("    RAR", "%s", hiveRedAudienceRight);
-        telemetry.addData("    BSL", "%s", hiveBlueScoringLeft);
-        telemetry.addData("    BSR", "%s", hiveBlueScoringRight);
-        telemetry.addData("    BAL", "%s", hiveBlueAudienceLeft);
-        telemetry.addData("    BAR", "%s", hiveBlueAudienceRight);
-    }
-
-    protected void updateTelemetryTestLocations() {
-
-        String redTagName    = "Red";
-        String blueTagName   = "Blue";
-        String frontTagName  = "Front";
-        String backTagName   = "Back";
-
-        // Red Tag seen from left camera
-        AprilTagClusterDetection redLeftDetection   = visionTask.targetDetectionsLeft.get(redTagName);
-        String redTagLeft    = "b:? r:? y:?";
-        String botRedTagLeft = "x:? y:? y:?";
-
-        if (null != redLeftDetection) {
-            redTagLeft = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
-                redLeftDetection.ftcPose.bearing, redLeftDetection.ftcPose.range, redLeftDetection.ftcPose.yaw);
-            botRedTagLeft = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
-                redLeftDetection.robotPose.getPosition().x, redLeftDetection.robotPose.getPosition().y, redLeftDetection.robotPose.getOrientation().getYaw(DEGREES));
-        }
-
-        // Blue Tag seen from left camera
-        AprilTagClusterDetection blueLeftDetection = visionTask.targetDetectionsLeft.get(redTagName);
-        String blueTagLeft = "b:? r:? y:?";
-        String botBlueTagLeft = "x:? y:? y:?";
-
-        if (null != blueLeftDetection) {
-            blueTagLeft = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f",
-                blueLeftDetection.ftcPose.bearing, blueLeftDetection.ftcPose.range, blueLeftDetection.ftcPose.yaw);
-            botBlueTagLeft = String.format(Locale.US, "x:%.0f y:%.0f y:%.0f",
-                blueLeftDetection.robotPose.getPosition().x, blueLeftDetection.robotPose.getPosition().y, blueLeftDetection.robotPose.getOrientation().getYaw(DEGREES));
-        }
-
-        telemetry.addData("Bot RL", "%s", botRedTagLeft);
-        telemetry.addData("    BL", "%s", botBlueTagLeft);
-        telemetry.addData("Tag RL", "%s", redTagLeft);
-        telemetry.addData("    BL", "%s", blueTagLeft);
     }
 
     protected void updateTelemetryAprilTagNames() {
@@ -371,9 +218,47 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
             follower.setPose(pedroPoseFromRobotPose(this.latestDetection.robotPose));
         }
 
+        configurePinpoint();
+
         super.configureBot();
         return this;
     }
+
+    // TO DO: Move all poinpoint nonsense to a pinpoint task.
+    public void configurePinpoint(){
+        pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
+
+        pinpoint.setOffsets(
+            GorillaGobildaWoodFloorDriveConstants.pinpointConfig.xPodOffset.get(),
+            GorillaGobildaWoodFloorDriveConstants.pinpointConfig.yPodOffset.get(),
+            GorillaGobildaWoodFloorDriveConstants.pinpointConfig.offsetUnits.get()
+        );
+
+        pinpoint.setEncoderResolution(
+            GorillaGobildaWoodFloorDriveConstants.pinpointConfig.podType.get()
+        );
+
+        /*
+         * Set the direction that each of the two odometry pods count. The X (forward) pod should
+         * increase when you move the robot forward. And the Y (strafe) pod should increase when
+         * you move the robot to the left.
+         */
+        pinpoint.setEncoderDirections(
+            GorillaGobildaWoodFloorDriveConstants.pinpointConfig.xPodDirection.get(),
+            GorillaGobildaWoodFloorDriveConstants.pinpointConfig.yPodDirection.get()
+        );
+
+        /*
+         * Before running the robot, recalibrate the IMU. This needs to happen when the robot is stationary
+         * The IMU will automatically calibrate when first powered on, but recalibrating before running
+         * the robot is a good idea to ensure that the calibration is "good".
+         * resetPosAndIMU will reset the position to 0,0,0 and also recalibrate the IMU.
+         * This is recommended before you run your autonomous, as a bad initial calibration can cause
+         * an incorrect starting value for x, y, and heading.
+         */
+        pinpoint.resetPosAndIMU();
+    }
+
 
     protected static Position           cameraPositionLeft;
     protected static YawPitchRollAngles cameraOrientationLeft;
@@ -391,6 +276,8 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
 
     protected Map<DriveMode, AbstractDriveTask<AbstractBasicDriveBot>> driveTasks  = new HashMap<>();
     protected Map<DriveMode, DriveMode> nextDriveModeFor = new HashMap<>();
+
+    protected GoBildaPinpointDriver                        pinpoint;
 
     protected BulkReadTask                                 bulkReadTask   = new BulkReadTask();
     protected DriveMode                                    driveMode      = DriveMode.DRIVE_POV;

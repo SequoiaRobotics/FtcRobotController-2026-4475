@@ -19,7 +19,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.stream.StreamSupport;
 
 @SuppressWarnings("unused")
 @TeleOp
@@ -50,9 +49,9 @@ public class GorillaDriveBot extends AbstractBasicTeleOpDriveBot {
             driveTankTask.rightPower = gamepad1.right_stick_y;
             break;
         case DRIVE_OMNI:
-            driveOmniTask.axial   = gamepad1.left_stick_y;
-            driveOmniTask.lateral = -gamepad1.left_stick_x;
+            driveOmniTask.axial   = gamepad1.right_stick_y;
             driveOmniTask.yaw     = -gamepad1.right_stick_x;
+            driveOmniTask.lateral = -gamepad1.left_stick_x;
             break;
         }
 
@@ -90,16 +89,18 @@ public class GorillaDriveBot extends AbstractBasicTeleOpDriveBot {
                 "duration:%d distance:???", // TO DO: distance from encoders since last detection
                 System.nanoTime() - this.latestDetectionAcquisitionTime
             );
-            location = String.format(
-                Locale.US,
-                "x:%0.2d y:%0.2d h:%0.2d",
-                this.latestDetection.robotPose.getPosition().x,
-                this.latestDetection.robotPose.getPosition().y,
-                this.latestDetection.robotPose.getOrientation().getYaw()
-            );
         }
+        pinpoint.update(); // TO DO: Move this to pinpoint task
+        location = String.format(
+            Locale.US,
+            "x:%.2f y:%.2f h:%.2f",
+            pinpoint.getPosition().getX(INCH),
+            pinpoint.getPosition().getY(INCH),
+            pinpoint.getPosition().getHeading(DEGREES)
+        );
+
         telemetry.addData("Status", "%s alliance running %s", alliance, runtime);
-        telemetry.addData( "Last", "%s",     last);
+        telemetry.addData("Last", "%s",     last);
         telemetry.addData("Location", "%s",  location );
         telemetry.addData("Camera", "%s %s", visionTask.portalLeft.getCameraState() , visionTask.portalRight.getCameraState());
 
@@ -124,7 +125,7 @@ public class GorillaDriveBot extends AbstractBasicTeleOpDriveBot {
                 telemetry.addData("WEIRD MOTOR MODE", "");
         }
 
-        updateTelemetryGameLocations();
+        updateTelemetryLocations();
 
 //        switch (telemetryMode) {
 //            case TELEMETRY_GAME_LOCATIONS:

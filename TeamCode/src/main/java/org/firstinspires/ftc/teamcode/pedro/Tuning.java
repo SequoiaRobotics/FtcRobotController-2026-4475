@@ -8,7 +8,7 @@ import org.firstinspires.ftc.teamcode.pedro.procedures.ForesightTuner;
 import org.firstinspires.ftc.teamcode.pedro.procedures.MecanumTuner;
 import org.firstinspires.ftc.teamcode.pedro.procedures.PinpointTuner;
 
-public class GorillaGobildaWoodFloorTuning {
+public class Tuning {
 
     // 1. Drivetrain Tuner: Configures motor names and directions
     @Tuner
