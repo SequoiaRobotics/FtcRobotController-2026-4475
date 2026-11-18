@@ -6,7 +6,6 @@ import android.graphics.Color;
 
 import androidx.annotation.NonNull;
 
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.util.RobotLog;
 
 import org.firstinspires.ftc.gorillacoder.testing.TestTagLibraries;
@@ -30,7 +29,7 @@ import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
-public abstract class AbstractVisionX2Task<OpModeT extends OpMode> extends AbstractOpMode.AbstractOpModeTask<OpModeT> {
+public abstract class AbstractVisionX2Task<OpModeT extends AbstractOpMode<OpModeT>> extends AbstractOpMode.AbstractOpModeTask<OpModeT> {
 
     protected abstract AbstractVisionRunner createVisionRunner();
 

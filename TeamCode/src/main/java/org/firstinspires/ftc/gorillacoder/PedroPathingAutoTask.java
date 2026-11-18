@@ -6,8 +6,6 @@ import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.util.RobotLog;
 
-import org.firstinspires.ftc.teamcode.pedro.GorillaDriveConstants;
-
 public class PedroPathingAutoTask<OpModeT extends AbstractOpMode<OpModeT>> extends DriveTankTask<OpModeT> {
     public PedroPathingAutoTask(Follower follower, double[] poses) {
         this.follower = follower;

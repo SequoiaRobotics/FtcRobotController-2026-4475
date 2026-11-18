@@ -197,7 +197,8 @@ public abstract class AbstractOpMode<OpModeT extends OpMode> extends OpMode {
     public AbstractOpMode<OpModeT> tasks(Object... value)
             throws BotTaskBuilder.Exception, ClassNotFoundException, IllegalAccessException, InstantiationException
     {
-        BotTaskBuilder<AbstractOpMode<OpModeT>> builder = (new BotTaskBuilder<AbstractOpMode<OpModeT>>()).opMode(this);
+        @SuppressWarnings("unchecked")
+        BotTaskBuilder<OpModeT> builder = (new BotTaskBuilder<OpModeT>()).opMode((OpModeT) this);
         // TODO: Always include a KeepReactiveTask that does nothing but run every few millis.
         // This will ensure that loop() does not hang for long when it calls sleepUntil, ensuring that the bot quickly exits when told to stop.
         // Otherwise, the RC App WILL notice, and it will forcibly kill the OpMode and the restart the bot.
@@ -207,13 +208,13 @@ public abstract class AbstractOpMode<OpModeT extends OpMode> extends OpMode {
         return this;
     }
 
-    public AbstractOpMode<OpModeT> enable(BotTask<AbstractOpMode<OpModeT>> task) {
+    public AbstractOpMode<OpModeT> enable(BotTask<OpModeT> task) {
         tasks.add(task);
 
         return this;
     }
 
-    public AbstractOpMode<OpModeT> disable(BotTask<AbstractOpMode<OpModeT>> task) {
+    public AbstractOpMode<OpModeT> disable(BotTask<OpModeT> task) {
         tasks.remove(task);
 
         return this;
@@ -221,7 +222,7 @@ public abstract class AbstractOpMode<OpModeT extends OpMode> extends OpMode {
 
     public void loop() {
         // TODO: Perhaps use an ElapsedTime instead of tracking start time.
-        BotTask<AbstractOpMode<OpModeT>> task = tasks.poll();
+        BotTask<OpModeT> task = tasks.poll();
         // task will never be null. But, 1) Make static analysis happy and 2) if it is, it should never have been scheduled, so chuck it.
         if (null == task) return;
 
@@ -265,7 +266,7 @@ public abstract class AbstractOpMode<OpModeT extends OpMode> extends OpMode {
         return this;
     }
 
-    protected abstract BotTask<OpModeT>[] getTasks();
+    protected abstract List<BotTask<OpModeT>> getTasks();
 
     @Override
     public void init() {
@@ -278,7 +279,7 @@ public abstract class AbstractOpMode<OpModeT extends OpMode> extends OpMode {
         }
 
         try {
-            tasks((Object[]) getTasks());
+            tasks( getTasks().toArray() );
         } catch (Exception ex) {
             throw new RuntimeException(String.format("%s.init(): Exception while creating tasks", getClass().getSimpleName()), ex);
         }
@@ -321,7 +322,7 @@ public abstract class AbstractOpMode<OpModeT extends OpMode> extends OpMode {
         });
     }
 
-    public static abstract class AbstractOpModeTask<OpModeT extends OpMode> extends AbstractBotTask<AbstractOpMode<OpModeT>> {
+    public static abstract class AbstractOpModeTask<OpModeT extends OpMode> extends AbstractBotTask<OpModeT> {
     }
 
     // TODO: Add tasks for IsAuto/isTeleOp, IMU Orientation, Voltage, Motor Bulk Read, BlobFinder
@@ -386,7 +387,7 @@ public abstract class AbstractOpMode<OpModeT extends OpMode> extends OpMode {
         Blue
     }
 
-    protected PriorityQueue< BotTask<AbstractOpMode<OpModeT>> > tasks;
+    protected PriorityQueue< BotTask<OpModeT> > tasks;
 
     protected Alliance alliance = Alliance.Unknown;
     {

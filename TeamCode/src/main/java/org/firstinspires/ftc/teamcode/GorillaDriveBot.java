@@ -11,12 +11,15 @@ import com.qualcomm.robotcore.hardware.HardwareDevice;
 
 import org.firstinspires.ftc.gorillacoder.AbstractBasicDriveBot;
 import org.firstinspires.ftc.gorillacoder.AbstractBasicTeleOpDriveBot;
+import org.firstinspires.ftc.gorillacoder.BotTask;
+import org.firstinspires.ftc.gorillacoder.GobildaPinpointTask;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 
 import java.util.AbstractMap;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -90,17 +93,16 @@ public class GorillaDriveBot extends AbstractBasicTeleOpDriveBot {
                 System.nanoTime() - this.latestDetectionAcquisitionTime
             );
         }
-        pinpoint.update(); // TO DO: Move this to pinpoint task
         location = String.format(
             Locale.US,
             "x:%.2f y:%.2f h:%.2f",
-            pinpoint.getPosition().getX(INCH),
-            pinpoint.getPosition().getY(INCH),
-            pinpoint.getPosition().getHeading(DEGREES)
+            pinpointTask.getPosition().getX(INCH),
+            pinpointTask.getPosition().getY(INCH),
+            pinpointTask.getPosition().getHeading(DEGREES)
         );
 
         telemetry.addData("Status", "%s alliance running %s", alliance, runtime);
-        telemetry.addData("Last", "%s",     last);
+        telemetry.addData("Last", "%s",      last);
         telemetry.addData("Location", "%s",  location );
         telemetry.addData("Camera", "%s %s", visionTask.portalLeft.getCameraState() , visionTask.portalRight.getCameraState());
 
@@ -175,6 +177,15 @@ public class GorillaDriveBot extends AbstractBasicTeleOpDriveBot {
         return this;
     }
 
+    @Override
+    protected List<BotTask<AbstractBasicDriveBot>> getTasks() {
+        List<BotTask<AbstractBasicDriveBot>> result = super.getTasks();
+
+        result.add((pinpointTask));
+
+        return result;
+    }
+
     protected AbstractBasicDriveBot configureBot() {
         super.configureBot();
 
@@ -190,5 +201,8 @@ public class GorillaDriveBot extends AbstractBasicTeleOpDriveBot {
         cameraPositionRight    = new Position(INCH,  6.5, 7., 10., 0);
         cameraOrientationRight = new YawPitchRollAngles(DEGREES, 0, -90, 0, 0);
     }
+
+    // TODO: Move to AbstractGorillaBot (shared code for all Gorilla Bots, both auto and teleop).
+    GobildaPinpointTask<AbstractBasicDriveBot> pinpointTask = new GobildaPinpointTask<>();
 
 } // class GorillaDriveBot

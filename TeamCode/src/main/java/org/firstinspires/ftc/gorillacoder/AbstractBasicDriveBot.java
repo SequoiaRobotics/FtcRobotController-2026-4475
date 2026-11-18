@@ -1,13 +1,12 @@
 package org.firstinspires.ftc.gorillacoder;
 
+import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.DEGREES;
+import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.RADIANS;
+
 import com.pedropathing.api.PoseFactory;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
-import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-
-import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.DEGREES;
-import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.RADIANS;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
@@ -15,8 +14,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
-import org.firstinspires.ftc.teamcode.pedro.GorillaGobildaWoodFloorDriveConstants;
 import org.firstinspires.ftc.vision.apriltag.AprilTagClusterDetection;
+import org.firstinspires.ftc.vision.apriltag.AprilTagPoseFtc;
 
 import java.util.Comparator;
 import java.util.HashMap;
@@ -40,7 +39,7 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
 
     // Initialize tagsOrder, tagsRightCaption, and tagsLeftCaption.
     {
-        String tagsInOrder[] = {
+        String[] tagsInOrder = {
             "RED AUDIENCE",   "RA",
             "RED SCORING",    "RS",
             "BLUE AUDIENCE",  "BA",
@@ -62,36 +61,37 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
 
     protected String locationFrom(AprilTagClusterDetection detection) {
         if (null == detection) {
-            return "x:??? y:??? b:???";
-        } else {
-            Pose3D   robotPose = detection.robotPose;
-            Position position  = robotPose.getPosition();
-            long   at      = position.acquisitionTime;
-            double x       = position.x;
-            double y       = position.y;
-            double bearing = robotPose.getOrientation().getYaw(RADIANS);
-            return String.format(Locale.US, "x:%.0f y:%.0f h:%.0f @:%d", x, y, bearing, at);
+            return "x:??? y:??? h:???";
         }
+
+        Pose3D   robotPose = detection.robotPose;
+        Position position  = robotPose.getPosition();
+        long   at      = position.acquisitionTime;
+        double x       = position.x;
+        double y       = position.y;
+        double heading = robotPose.getOrientation().getYaw(DEGREES);
+        @SuppressWarnings("UnnecessaryLocalVariable")
+        String result  =  String.format(Locale.US, "x:%.0f y:%.0f h:%.0f @:%d", x, y, heading, at);
+
+        return result;
     };
 
-//    protected String bearingFrom(AprilTagClusterDetection detection) {
-//        if (null == detection) {
-//            return "b:??? r:??? y:???";
-//        } else {
-//            AprilTagPoseFtc tagPose = detection.ftcPose;
-//            long   at        = detection.frameAcquisitionNanoTime;
-//            double x         = tagPose.x;
-//            double y         = tagPose.y;
-//            double yaw       = tagPose.yaw;
-//            double elevation = tagPose.elevation;
-//            double bearing = tagPose.bearing;
-//            return String.format(Locale.US, "x:%.0f y:%.0f b:%.0f @:%d", x, y, bearing, at);
-//
-//            hiveRedAudienceLeft = String.format(Locale.US, "b:%.0f r:%.0f y:%.0f b:%0f @:%d" ,
-//                redAudienceLeftDetection.ftcPose.bearing, redAudienceLeftDetection.ftcPose.range, redAudienceLeftDetection.ftcPose.yaw);
-//
-//        }
-//    };
+    protected String bearingFrom(AprilTagClusterDetection detection) {
+        if (null == detection) {
+            return "b:??? e:??? r:??? y:??? p:???";
+        }
+
+        AprilTagPoseFtc tagPose = detection.ftcPose;
+        double bearing   = tagPose.bearing;   // robot relative horizontal angle to the tag.
+        double elevation = tagPose.elevation; // robot relative vertical angle to the tag.
+        double range     = tagPose.range;     // robot relative distance to the tag.
+        double yaw       = tagPose.yaw;       // tag relative horizontal angle to the bot (Z-axis).
+        double pitch     = tagPose.pitch;     // tag relative vertical angle to bot (X-axis).
+        @SuppressWarnings("UnnecessaryLocalVariable")
+        String result    = String.format(Locale.US, "b:%.2f e:%.2f r:%.2f\ny:%.2f p:%.2f", bearing, elevation, range, yaw, pitch);
+
+        return result;
+    };
 
     protected void updateTelemetryLocations() {
         // TO DO: Show detections for each camera/tag in the order seen, most recent first.
@@ -99,15 +99,11 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
         // A task would do the same, throwing out detections that are "too old".
         // Too old should be determined by encoder distance traveled since the detection.
         // Encoder distance traveled should be the some of all the encoders.
-        Comparator<String> tagComparator = (left, right) -> Integer.compare(tagsOrder.get(left), tagsOrder.get(right));
-        TreeSet<String> tagsAsSeen = new TreeSet<>(tagComparator);
+        Comparator<String> tagComparator = Comparator.comparingInt(tagsOrder::get);
+        TreeSet<String>    tagsAsSeen = new TreeSet<>(tagComparator);
 
-        visionTask.targetDetectionsLeft.keySet().forEach(
-            name -> tagsAsSeen.add(name)
-        );
-        visionTask.targetDetectionsRight.keySet().forEach(
-            name -> tagsAsSeen.add(name)
-        );
+        tagsAsSeen.addAll( visionTask.targetDetectionsLeft.keySet()  );
+        tagsAsSeen.addAll( visionTask.targetDetectionsRight.keySet() );
 
         telemetry.addData("Tag Position", "");
         tagsAsSeen.forEach( (String tag) -> {
@@ -122,9 +118,9 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
         tagsAsSeen.forEach( (String tag) -> {
             AprilTagClusterDetection detection;
             detection= this.visionTask.targetDetectionsLeft.get(tag);
-            telemetry.addData( tagsLeftCaption.get(tag), locationFrom(detection) );
+            telemetry.addData( tagsLeftCaption.get(tag), bearingFrom(detection) );
             detection = this.visionTask.targetDetectionsRight.get(tag);
-            telemetry.addData( tagsRightCaption.get(tag), locationFrom(detection) );
+            telemetry.addData( tagsRightCaption.get(tag), bearingFrom(detection) );
         });
     }
 
@@ -180,11 +176,14 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
             throw new RuntimeException("TO DO: Update to work with a diamond field");
         }
 
+        @SuppressWarnings("UnnecessaryLocalVariable")
         Pose result = PoseFactory.radians().of(x, y, heading);
         return result;
     }
 
     protected AbstractBasicDriveBot configureBot() {
+        super.configureBot();
+
         telemetry.log().setCapacity(100);
         telemetry.log().setDisplayOrder(Telemetry.Log.DisplayOrder.OLDEST_FIRST);
         telemetry.setDisplayFormat(Telemetry.DisplayFormat.MONOSPACE);
@@ -218,47 +217,8 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
             follower.setPose(pedroPoseFromRobotPose(this.latestDetection.robotPose));
         }
 
-        configurePinpoint();
-
-        super.configureBot();
         return this;
     }
-
-    // TO DO: Move all poinpoint nonsense to a pinpoint task.
-    public void configurePinpoint(){
-        pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
-
-        pinpoint.setOffsets(
-            GorillaGobildaWoodFloorDriveConstants.pinpointConfig.xPodOffset.get(),
-            GorillaGobildaWoodFloorDriveConstants.pinpointConfig.yPodOffset.get(),
-            GorillaGobildaWoodFloorDriveConstants.pinpointConfig.offsetUnits.get()
-        );
-
-        pinpoint.setEncoderResolution(
-            GorillaGobildaWoodFloorDriveConstants.pinpointConfig.podType.get()
-        );
-
-        /*
-         * Set the direction that each of the two odometry pods count. The X (forward) pod should
-         * increase when you move the robot forward. And the Y (strafe) pod should increase when
-         * you move the robot to the left.
-         */
-        pinpoint.setEncoderDirections(
-            GorillaGobildaWoodFloorDriveConstants.pinpointConfig.xPodDirection.get(),
-            GorillaGobildaWoodFloorDriveConstants.pinpointConfig.yPodDirection.get()
-        );
-
-        /*
-         * Before running the robot, recalibrate the IMU. This needs to happen when the robot is stationary
-         * The IMU will automatically calibrate when first powered on, but recalibrating before running
-         * the robot is a good idea to ensure that the calibration is "good".
-         * resetPosAndIMU will reset the position to 0,0,0 and also recalibrate the IMU.
-         * This is recommended before you run your autonomous, as a bad initial calibration can cause
-         * an incorrect starting value for x, y, and heading.
-         */
-        pinpoint.resetPosAndIMU();
-    }
-
 
     protected static Position           cameraPositionLeft;
     protected static YawPitchRollAngles cameraOrientationLeft;
@@ -277,9 +237,7 @@ public abstract class AbstractBasicDriveBot extends AbstractOpMode<AbstractBasic
     protected Map<DriveMode, AbstractDriveTask<AbstractBasicDriveBot>> driveTasks  = new HashMap<>();
     protected Map<DriveMode, DriveMode> nextDriveModeFor = new HashMap<>();
 
-    protected GoBildaPinpointDriver                        pinpoint;
-
-    protected BulkReadTask                                 bulkReadTask   = new BulkReadTask();
+    protected BulkReadTask<AbstractBasicDriveBot>          bulkReadTask   = new BulkReadTask<>();
     protected DriveMode                                    driveMode      = DriveMode.DRIVE_POV;
     protected DrivePovTask<AbstractBasicDriveBot>          drivePovTask   = new DrivePovTask<>();
 

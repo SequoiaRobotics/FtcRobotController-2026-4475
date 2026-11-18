@@ -7,7 +7,9 @@ import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @SuppressWarnings("unused")
@@ -44,17 +46,18 @@ public abstract class AbstractBasicTeleOpDriveBot extends AbstractBasicDriveBot 
     } // class GamePadTask
 
     @Override
-    protected BotTask<AbstractBasicDriveBot>[] getTasks() {
-        @SuppressWarnings("unchecked")
-        BotTask<AbstractBasicDriveBot>[] result = new BotTask[] {
+    protected List<BotTask<AbstractBasicDriveBot>> getTasks() {
+        @SuppressWarnings("UnnecessaryLocalVariable")
+        List<BotTask<AbstractBasicDriveBot>> result = new ArrayList<BotTask<AbstractBasicDriveBot>>( List.of(
             gamePadTask,
             visionTask,
             drivePovTask,
             new TelemetryTask()
-        };
+        ));
+
         return result;
     }
 
-    protected GamePadTask                                  gamePadTask   = new GamePadTask();
+    protected GamePadTask gamePadTask   = new GamePadTask();
 
 } // abstract class AbstractBasicTeleOpDriveBot

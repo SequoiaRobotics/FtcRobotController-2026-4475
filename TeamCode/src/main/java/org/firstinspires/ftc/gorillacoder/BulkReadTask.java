@@ -34,7 +34,6 @@ public class BulkReadTask<OpModeT extends AbstractOpMode<OpModeT>> extends Abstr
         return this;
     }
 
-    // TODO: Move to task
     protected List<LynxModule> allHubs;
 
 } // class BulkReadTask

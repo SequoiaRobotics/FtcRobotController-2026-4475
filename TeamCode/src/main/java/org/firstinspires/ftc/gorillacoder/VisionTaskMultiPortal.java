@@ -17,7 +17,7 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import java.util.ArrayList;
 import java.util.Collections;
 
-public class VisionTaskMultiPortal<OpModeT extends OpMode> extends AbstractVisionX2Task<OpModeT> {
+public class VisionTaskMultiPortal<OpModeT extends AbstractOpMode<OpModeT>> extends AbstractVisionX2Task<OpModeT> {
 
     protected class VisionMultiRunner extends AbstractVisionRunner {
         public synchronized VisionMultiRunner loop() {

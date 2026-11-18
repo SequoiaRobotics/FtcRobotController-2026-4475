@@ -1,5 +1,8 @@
 package org.firstinspires.ftc.gorillacoder;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @SuppressWarnings("unused")
 public abstract class AbstractBasicAutoDriveBot extends AbstractBasicDriveBot {
 
@@ -13,14 +16,14 @@ public abstract class AbstractBasicAutoDriveBot extends AbstractBasicDriveBot {
     }
 
     @Override
-    protected BotTask<AbstractBasicDriveBot>[] getTasks() {
+    protected List<BotTask<AbstractBasicDriveBot>> getTasks() {
         @SuppressWarnings("unchecked")
-        BotTask<AbstractBasicDriveBot>[] result = new BotTask[] {
+        List<BotTask<AbstractBasicDriveBot>> result = new ArrayList( List.of(
             visionTask,
             bulkReadTask,
             drivePovTask, // initially POV drive mode. Other drive modes may be switched to later.
             new TelemetryTask()
-        };
+        ));
 
 
 
