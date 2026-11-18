@@ -5,6 +5,8 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagClusterDetection;
 
+import java.util.List;
+
 public class HiveOrientationDetector {
 
     // ============== HIVE ORIENTATION ============== //
@@ -20,11 +22,11 @@ public class HiveOrientationDetector {
 
     private final String alliancePrefix;
     private HiveSide currentOrientation = HiveSide.UNKNOWN;
+    private AprilTagClusterDetection stableCluster = null;
 
-    // TODO: Tune these thresholds after testing the cameras.
-    // An upright cluster should have roll near 0 degrees.
-    // An inverted cluster should have roll near +/-180 degrees.
-    private static final double MAX_UPRIGHT_ROLL = 75.0;
+    private static final double STABLE_ROLL_A = 0.0;   // Calibrate
+    private static final double STABLE_ROLL_B = 0.0;   // Calibrate
+    private static final double ROLL_TOLERANCE = 5.0;
 
 
     // ============== INITIALIZATION ============== //
@@ -38,23 +40,49 @@ public class HiveOrientationDetector {
     }
 
 
+
+    private double angleDifference(double a, double b) {
+        double difference = Math.toRadians(a - b);
+
+        return Math.toDegrees(Math.atan2(
+                Math.sin(difference),
+                Math.cos(difference)
+        ));
+    }
+
+    public boolean isStable(double measuredRoll) {
+        return Math.abs(angleDifference(
+                measuredRoll, STABLE_ROLL_A
+        )) <= ROLL_TOLERANCE
+
+                || Math.abs(angleDifference(
+                measuredRoll, STABLE_ROLL_B
+        )) <= ROLL_TOLERANCE;
+    }
+
     // ============== DETECT HIVE ORIENTATION ============== //
 
-    public void update() {
+    public void update(List<AprilTagDetection> detections) {
 
         HiveSide detectedSide = HiveSide.UNKNOWN;
 
-        for (AprilTagDetection detection : processor.getDetections()) {
+        // Reset the stable cluster every cycle to avoid stale data
+        stableCluster = null;
+
+        for (AprilTagDetection detection : detections) {
 
             // Only process BIOBUZZ AprilTag clusters.
             if (!(detection instanceof AprilTagClusterDetection)) {
                 continue;
             }
 
-            AprilTagClusterDetection cluster =
-                    (AprilTagClusterDetection) detection;
+            AprilTagClusterDetection cluster = (AprilTagClusterDetection) detection;
 
             if (cluster.ftcPose == null) {
+                continue;
+            }
+
+            if (cluster.metadata == null || cluster.metadata.name == null) {
                 continue;
             }
 
@@ -67,9 +95,9 @@ public class HiveOrientationDetector {
 
             // Check whether this cluster is upright.
             // Visible does not necessarily mean scorable.
-            double roll = Math.abs(cluster.ftcPose.roll);
+            double roll = cluster.ftcPose.roll;
 
-            if (roll >= MAX_UPRIGHT_ROLL) {
+            if (!(isStable(roll))) {
                 continue;
             }
 
@@ -89,11 +117,14 @@ public class HiveOrientationDetector {
             // a confident orientation.
             if (detectedSide != HiveSide.UNKNOWN
                     && detectedSide != candidate) {
+
                 currentOrientation = HiveSide.UNKNOWN;
+                stableCluster = null;
                 return;
             }
 
             detectedSide = candidate;
+            stableCluster = cluster;
         }
 
         // UNKNOWN when no usable cluster was detected.
@@ -118,4 +149,5 @@ public class HiveOrientationDetector {
     public boolean hasValidObservation() {
         return currentOrientation != HiveSide.UNKNOWN;
     }
+    public AprilTagClusterDetection getStableCluster() { return stableCluster; }
 }

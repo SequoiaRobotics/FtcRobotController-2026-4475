@@ -1,36 +1,53 @@
 
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+
 public class Intake {
 
-    // ============== HARDWARE CONFIGURATION ============== //
+    // ============== CONFIGURATION ============== //
 
-    // TODO: Declare intake motor(s) and any collection sensors.
-    // TODO: Define intake power, reverse power, and motor directions.
-    // TODO: Configure sensor thresholds for detecting Pollen.
+    private final DcMotor intakeMotor;
 
+    // ENABLE / CONSTRUCT IF THIRD AXEL DOESN'T FEED
+    // private final DcMotor thirdAxelIntakeMotor;
 
-    // ============== INTERNAL STATE ============== //
+    // TODO: Adjust power after testing.
+    private static final double INTAKE_POWER = 0.8;
+    private static final double INTAKE_REVERSE_POWER = -0.3;
+    // TODO: Adjust intake duration after testing.
+    public static final double COLLECT_DURATION = 1.5;
 
-    // Tracks whether the intake has been commanded to run.
-    // Does NOT confirm that a motor is physically spinning.
     private boolean running = false;
 
 
     // ============== INITIALIZATION ============== //
 
-    // TODO: Add a constructor accepting HardwareMap.
-    // Initialize motors and sensors using their configuration names.
-    // Configure motor directions and zero-power behavior.
+    public Intake(HardwareMap hardwareMap) {
+
+        // Retrieves the motor configured on Expansion Hub port 0.
+        // "intakeMotor" must match the Robot Configuration name.
+        intakeMotor = hardwareMap.get(
+                DcMotor.class,
+                "intakeMotor"
+        );
+        intakeMotor.setZeroPowerBehavior(
+                DcMotor.ZeroPowerBehavior.BRAKE
+        );
+        intakeMotor.setPower(0);
+
+
+    }
 
 
     // ============== START INTAKE ============== //
 
     public void start() {
         running = true;
-
-        // TODO: Set intake motor(s) to the desired power.
-        // Keep this method nonblocking so Pedro can keep updating.
+        intakeMotor.setPower(INTAKE_POWER);
+        // thirdAxelIntakeMotor.setPower(INTAKE_POWER);
     }
 
 
@@ -38,36 +55,20 @@ public class Intake {
 
     public void stop() {
         running = false;
+        intakeMotor.setPower(0);
+        // thirdAxelIntakeMotor.setPower(0);
+    }
 
-        // TODO: Set intake motor(s) to zero power.
+    // =============== REVERSE INTAKE =============== //
+    public void reverse() {
+        running = true;
+        intakeMotor.setPower(INTAKE_REVERSE_POWER);
     }
 
 
-    // ============== STATUS CHECK ============== //
+    // ============== STATUS ============== //
 
     public boolean isRunning() {
         return running;
     }
-
-
-    // ============== FUTURE COLLECTION DETECTION ============== //
-
-    // TODO: Add hasPollen() using a distance, beam-break,
-    // or another suitable sensor.
-    //
-    // Autonomous can use this to decide when collection is complete.
-    // For multiple Pollen, consider tracking how many are stored.
-
-    // TODO: Consider adding:
-    // - Reverse/unjam control
-    // - Jam detection
-    // - Collection timeout (handled by autonomous or subsystem)
-    // - Maximum capacity detection
-
-
-    // ============== FUTURE CONTINUOUS UPDATE ============== //
-
-    // TODO: Add update() if the intake needs ongoing sensor
-    // monitoring, jam handling, or a timed collection sequence.
-    // Call it once per OpMode loop if implemented.
 }
