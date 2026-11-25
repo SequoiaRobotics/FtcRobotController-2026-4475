@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.movement;
+    package org.firstinspires.ftc.teamcode.movement;
 
 import android.util.Size;
 
@@ -6,6 +6,10 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+import com.qualcomm.robotcore.hardware.IMU;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 import org.firstinspires.ftc.teamcode.localization.CameraSession;
 import org.firstinspires.ftc.teamcode.subsystems.TurretStationary;
@@ -79,6 +83,18 @@ public class FTCDrivebotAS extends LinearOpMode {
 
     @Override
     public void runOpMode() {
+
+        //orienting gyroscope in control hub
+        IMU imu = hardwareMap.get(IMU.class, "imu");
+
+        IMU.Parameters parameters = new IMU.Parameters(new RevHubOrientationOnRobot(
+        RevHubOrientationOnRobot.LogoFacingDirection.FORWARD,
+        RevHubOrientationOnRobot.UsbFacingDirection.LEFT
+            )
+        );
+
+        imu.initialize(parameters);
+        
         // Original Android Studio drivetrain setup, unchanged.
         DcMotor frontLeftMotor = hardwareMap.get(DcMotor.class, "frontLeft");
         DcMotor backLeftMotor = hardwareMap.get(DcMotor.class, "backLeft");
@@ -92,6 +108,12 @@ public class FTCDrivebotAS extends LinearOpMode {
         backLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         frontRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         backRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        //Makes robot stop after let go of joystick
+        frontLeftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        backLeftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        frontRightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        backRightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         CameraSession camera1 = null;
         CameraSession camera2 = null;
@@ -133,6 +155,11 @@ public class FTCDrivebotAS extends LinearOpMode {
             }
 
             while (opModeIsActive()) {
+
+                //Reset robots forward direction to 0 degrees if driver presses options
+            if (gamepad1.options) {
+                imu.resetYaw();
+            }
                 // Turret update
                 turretStationary.update();
 
@@ -217,10 +244,25 @@ public class FTCDrivebotAS extends LinearOpMode {
                     turretStationary.stopFlyWheel();
                 }
 
+                
+                //getting robotics current heading
+                double botHeading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+
+                //rotate jostick inputs using heading
+                double rotX = strafe * Math.cos(-botHeading) - forward * Math.sin(-botHeading);
+                double rotY = strafe * Math.sin(-botHeading) + forward * Math.cos(-botHeading);
+
+
+                //new soften joystick inputs with rotY and rotX instead of forward and strafe
+                rotY = Math.copySign(rotY * rotY, rotY);
+                rotX = Math.copySign(rotX * rotX, rotX);
+                turn = Math.copySign(turn * turn, turn);
+                /*
                 // Soften joystick inputs while preserving their signs.
                 forward = Math.copySign(forward * forward, forward);
                 strafe = Math.copySign(strafe * strafe, strafe);
                 turn = Math.copySign(turn * turn, turn);
+                */
 
                 double frontLeftPower = forward + strafe + turn;
                 double backLeftPower = forward - strafe + turn;
